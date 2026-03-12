@@ -177,8 +177,7 @@ func InitCertificate() {
 
 	ip := GetPublicIP()
 	if ip == "" {
-		log.Println("ssl: Could not determine public IP, skipping certificate generation")
-		return
+		log.Fatal("ssl: Could not determine public IP, certificate application failed")
 	}
 
 	email := os.Getenv("LETSENCRYPT_EMAIL")
@@ -188,7 +187,7 @@ func InitCertificate() {
 
 	log.Println("ssl: IP determined as", ip, "- Applying for certificate...")
 	if err := ApplyCertificate(ip, email); err != nil {
-		log.Println("ssl: Failed to apply IP certificate:", err)
+		log.Fatal("ssl: Failed to apply IP certificate:", err)
 	} else {
 		log.Println("ssl: Successfully applied for IP certificate for", ip)
 	}
