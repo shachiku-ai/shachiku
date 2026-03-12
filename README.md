@@ -11,6 +11,8 @@
 **Shachiku** (Corporate Slave) is an all-in-one, self-hosted personal AI Agent designed to work 24/7 like a "corporate slave" to handle your tasks and workflows.
 The project adopts a decoupled frontend and backend architecture and is ultimately built into a **Single-Binary**, providing an outstanding out-of-the-box experience whether deployed locally or on a cloud server.
 
+![Screenshot](./.github/screenshot.png)
+
 ---
 
 ## 🚀 Core Features
