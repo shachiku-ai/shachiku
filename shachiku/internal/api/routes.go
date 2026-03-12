@@ -76,6 +76,7 @@ func recordFailedAttempt(ip string) {
 
 func SetupRoutes() *gin.Engine {
 	r := gin.Default()
+	_ = r.SetTrustedProxies(nil) // Disable proxy trust to get the true network IP
 
 	os.MkdirAll(filepath.Join(config.GetDataDir(), "uploads"), 0755)
 
