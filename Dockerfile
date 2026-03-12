@@ -12,7 +12,7 @@ COPY shachiku-ui/ ./
 RUN pnpm run build
 
 # Stage 2: Build the Go Backend
-FROM golang:1.24-bookworm AS go-builder
+FROM golang:1.25.1-bookworm AS go-builder
 WORKDIR /app/shachiku
 
 # Download Go module dependencies
