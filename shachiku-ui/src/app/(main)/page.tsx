@@ -1,0 +1,271 @@
+"use client"
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
+import { useState, useEffect, useRef } from "react"
+import { useTranslation } from "react-i18next"
+import { SendIcon, BotIcon, UserIcon, Loader2Icon, ClockIcon, PaperclipIcon, XIcon, ChevronRightIcon, BrushCleaning } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { SiteHeader } from "@/components/site-header"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import rehypeRaw from "rehype-raw"
+import { useChat } from "@/providers/chat-provider"
+
+export default function ChatPage() {
+  const { t } = useTranslation()
+  const {
+    messages, input, setInput, attachments, setAttachments,
+    loading, fetching, abortController, setAbortController,
+    handleSend: handleSendContext, executeClearShortMemory
+  } = useChat()
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
+  const handleClearShortMemory = () => {
+    setShowClearConfirm(true)
+  }
+
+  const handleConfirmClear = async () => {
+    setShowClearConfirm(false)
+    await executeClearShortMemory()
+  }
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if ((!input.trim() && attachments.length === 0) || loading) return
+
+    const attachs = [...attachments];
+    const msg = input.trim();
+    setInput("")
+    setAttachments([]) // Clear locally for better UX
+
+    await handleSendContext(e, msg, attachs)
+  }
+
+  return (
+    <div className="absolute inset-0 flex flex-col overflow-hidden md:rounded-xl">
+      <SiteHeader title={t("navMain.chat", "Chat & History")}>
+        <Button variant="outline" size="sm" onClick={handleClearShortMemory}>
+          <BrushCleaning className="h-4 w-4" />
+          <span className="hidden md:block ml-2">
+            {t("chat.clearShortMemory", "Clear Short Memory")}
+          </span>
+        </Button>
+      </SiteHeader>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 min-h-0">
+          {fetching ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2Icon className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <BotIcon className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-2xl font-bold tracking-tight">{t("chat.title", "Agent Conversation")}</h3>
+              <p className="text-sm text-muted-foreground mt-2 max-w-sm">
+                {t("chat.empty", "History is currently empty. Start typing to send your first message to the agent.")}
+              </p>
+            </div>
+          ) : (
+            messages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`flex gap-3 ${msg.Role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {msg.Role !== "user" && (
+                  <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-md border bg-background shadow-sm">
+                    {msg.Role === "agent" ? <BotIcon className="h-4 w-4" /> : <BotIcon className="h-4 w-4 text-destructive" />}
+                  </div>
+                )}
+                <div
+                  className={`rounded-lg px-4 py-2 max-w-[80%] ${msg.Role === "user"
+                    ? "bg-primary text-primary-foreground"
+                    : msg.Role === "system"
+                      ? "bg-destructive/10 text-destructive text-sm"
+                      : "bg-muted"
+                    }`}
+                >
+                  {msg.Role === "user" ? (
+                    <div className="whitespace-pre-wrap break-words">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeRaw]}
+                        components={{
+                          p: ({ node: _, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                          img: ({ node: _, ...props }) => (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img className="max-w-full h-auto rounded-lg my-2 shadow-sm" {...props} alt={props.alt || ""} />
+                          ),
+                          a: ({ node: _, ...props }) => <a className="underline hover:opacity-80" {...props} />
+                        }}
+                      >
+                        {msg.Content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div className="prose prose-sm max-w-none break-words dark:prose-invert">
+                      {msg.Thought && (
+                        <details className="mb-4 group border rounded-md">
+                          <summary className="cursor-pointer font-medium text-xs px-3 py-2 text-muted-foreground hover:bg-muted/50 select-none list-none flex items-center gap-1 transition-colors">
+                            <ChevronRightIcon className="h-3 w-3 transition-transform group-open:rotate-90" />
+                            {t("chat.thoughtProcess", "Thought Process")}
+                          </summary>
+                          <div className="p-3 pt-2 text-xs text-muted-foreground border-t bg-muted/10 whitespace-pre-wrap max-h-64 overflow-y-auto font-sans leading-relaxed">
+                            {msg.Thought}
+                          </div>
+                        </details>
+                      )}
+
+                      {loading && idx === messages.length - 1 ? (
+                        <div className="flex items-start gap-2 text-muted-foreground">
+                          {(!msg.Content) && (
+                            <Loader2Icon className="h-4 w-4 animate-spin mt-0.5 shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            {msg.Content ? (
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeRaw]}
+                                components={{
+                                  img: ({ node: _, ...props }) => (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img className="max-w-full h-auto rounded-lg my-2 shadow-sm" {...props} alt={props.alt || ""} />
+                                  )
+                                }}
+                              >
+                                {msg.Content}
+                              </ReactMarkdown>
+                            ) : (
+                              <span className="italic text-sm">{msg.Thought ? "" : t("chat.thinking", "Thinking...")}</span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        msg.Content ? (
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeRaw]}
+                            components={{
+                              img: ({ node: _, ...props }) => (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img className="max-w-full h-auto rounded-lg my-2 shadow-sm" {...props} alt={props.alt || ""} />
+                              )
+                            }}
+                          >
+                            {msg.Content}
+                          </ReactMarkdown>
+                        ) : null
+                      )}
+                    </div>
+                  )}
+                </div>
+                {msg.Role === "user" && (
+                  <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-md border bg-primary text-primary-foreground shadow-sm">
+                    <UserIcon className="h-4 w-4" />
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+        <div className="p-4 border-t bg-background shrink-0 flex flex-col gap-2 relative">
+          {loading && (
+            <div className="absolute -top-12 left-0 right-0 flex justify-center z-10 w-full">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full shadow-md bg-background hover:bg-muted font-medium text-xs"
+                onClick={() => {
+                  if (abortController) {
+                    abortController.abort()
+                    setAbortController(null)
+                  }
+                }}
+              >
+                <div className="mr-2 h-2.5 w-2.5 bg-foreground rounded-sm" />
+                {t("chat.stop", "Stop generating")}
+              </Button>
+            </div>
+          )}
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {attachments.map((file, idx) => (
+                <div key={idx} className="relative group rounded-md overflow-hidden border bg-muted">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={URL.createObjectURL(file)} alt="attachment" className="h-16 w-16 object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                    className="absolute top-1 right-1 bg-background/80 hover:bg-destructive hover:text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <XIcon className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <form
+            onSubmit={handleSend}
+            className="flex w-full items-center space-x-2"
+          >
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              className="hidden"
+              id="file-upload"
+              onChange={(e) => {
+                if (e.target.files) {
+                  setAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
+                }
+              }}
+              disabled={loading || fetching}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => document.getElementById("file-upload")?.click()}
+              disabled={loading || fetching}
+              title="Attach Images"
+            >
+              <PaperclipIcon className="h-4 w-4" />
+            </Button>
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={t("chat.placeholder", "Type your message to the agent...")}
+              className="flex-1"
+              disabled={loading || fetching}
+            />
+            <Button type="submit" size="icon" disabled={(!input.trim() && attachments.length === 0) || loading || fetching}>
+              <SendIcon className="h-4 w-4" />
+              <span className="sr-only">Send</span>
+            </Button>
+          </form>
+        </div>
+      </div>
+      <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("chat.confirmClearTitle", "Clear Chat Memory")}</DialogTitle>
+            <DialogDescription className="text-base text-foreground mt-2">
+              {t("chat.confirmClear", "Are you sure you want to clear short-term chat memory?")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowClearConfirm(false)}>{t("common.cancel", "Cancel")}</Button>
+            <Button variant="destructive" onClick={handleConfirmClear}>{t("common.confirm", "Confirm")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
