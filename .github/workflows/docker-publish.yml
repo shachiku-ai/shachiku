@@ -49,8 +49,8 @@ jobs:
             dist/shachiku-linux-amd64
             dist/shachiku-darwin-arm64
             dist/shachiku-windows-amd64.exe
-            dist/Shachiku.dmg
-            dist/Shachiku.exe
+            dist/shachiku-macos.dmg
+            dist/shachiku-windows.exe
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
