@@ -68,7 +68,7 @@ func (m *DiscordModule) messageCreate(s *discordgo.Session, msg *discordgo.Messa
 	}
 
 	for _, f := range attachedFiles {
-		text += fmt.Sprintf("\n[User attached file: %s]", f)
+		text += fmt.Sprintf("\n@%s", f)
 	}
 
 	if strings.TrimSpace(text) == "" {

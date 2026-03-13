@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -79,6 +81,10 @@ func generateClaudeCode(ctx context.Context, cfg models.LLMConfig, history []mod
 
 func generateGeminiCLI(ctx context.Context, cfg models.LLMConfig, history []models.Message, systemPrompt string, taskID uint) (string, error) {
 	var sb strings.Builder
+	var includedDirs []string
+	var promptFiles []string
+	dirMap := make(map[string]bool)
+	fileRegex := regexp.MustCompile(`(?m)^@(/.*)$`)
 
 	if systemPrompt != "" {
 		sb.WriteString(fmt.Sprintf("System:\n%s\n\n", systemPrompt))
@@ -91,6 +97,19 @@ func generateGeminiCLI(ctx context.Context, cfg models.LLMConfig, history []mode
 		}
 		if msg.Content != "" {
 			sb.WriteString(fmt.Sprintf("%s:\n%s\n\n", role, msg.Content))
+
+			matches := fileRegex.FindAllStringSubmatch(msg.Content, -1)
+			for _, m := range matches {
+				if len(m) > 1 {
+					path := strings.TrimSpace(m[1])
+					dir := filepath.Dir(path)
+					if !dirMap[dir] {
+						dirMap[dir] = true
+						includedDirs = append(includedDirs, dir)
+					}
+					promptFiles = append(promptFiles, "@"+path)
+				}
+			}
 		}
 	}
 
@@ -99,7 +118,12 @@ func generateGeminiCLI(ctx context.Context, cfg models.LLMConfig, history []mode
 	reqCtx, cancel := context.WithTimeout(ctx, 600*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(reqCtx, "gemini", "-p", "")
+	args := []string{"-p", strings.Join(promptFiles, " ")}
+	for _, dir := range includedDirs {
+		args = append(args, "--include-directories", dir)
+	}
+
+	cmd := exec.CommandContext(reqCtx, "gemini", args...)
 	cmd.Stdin = strings.NewReader(sb.String())
 
 	configureCmd(cmd)

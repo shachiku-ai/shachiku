@@ -103,7 +103,7 @@ func (m *TelegramModule) handleMessage(msg *tgbotapi.Message) {
 	}
 
 	for _, f := range attachedFiles {
-		text += fmt.Sprintf("\n[User attached file: %s]", f)
+		text += fmt.Sprintf("\n@%s", f)
 	}
 
 	username := msg.From.UserName
