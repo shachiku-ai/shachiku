@@ -59,14 +59,28 @@ build-windows-amd64: build-ui
 	@echo "========================================"
 
 # Desktop client build using Wails v3
-build-desktop: build-ui
+build-darwin-desktop: build-ui
 	@echo "========================================"
 	@echo "3. Compiling shachiku-desktop (Darwin arm64)..."
 	@echo "========================================"
 	mkdir -p dist
 	cd shachiku-desktop && wails3 task darwin:package ARCH=arm64
-	rm -rf dist/shachiku-desktop-darwin-arm64.app
-	cp -a shachiku-desktop/bin/shachiku-desktop.app dist/shachiku-desktop-darwin-arm64.app
+	rm -rf dist/Shachiku.app
+	cp -a shachiku-desktop/bin/shachiku-desktop.app dist/Shachiku.app
+	@echo "========================================"
+	@echo "4. Creating DMG image..."
+	@echo "========================================"
+	rm -f dist/Shachiku.dmg
+	create-dmg \
+		--volname "Shachiku" \
+		--window-pos 200 120 \
+		--window-size 600 400 \
+		--icon-size 100 \
+		--icon "Shachiku.app" 150 190 \
+		--hide-extension "Shachiku.app" \
+		--app-drop-link 450 190 \
+		"dist/Shachiku.dmg" \
+		"dist/Shachiku.app"
 	@echo "========================================"
 	@echo "✨ Desktop builds complete!"
 	@echo "🎯 Executable path: dist/"
