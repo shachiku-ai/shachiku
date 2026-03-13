@@ -109,6 +109,8 @@ func GenerateSkillInstructions(ctx context.Context, cfg models.LLMConfig, name, 
 		resp, err = generateAnthropic(ctx, cfg, history, systemPrompt, 0)
 	case "gemini":
 		resp, err = generateGemini(ctx, cfg, history, systemPrompt, 0)
+	case "openrouter":
+		resp, err = generateOpenRouter(ctx, cfg, history, systemPrompt, 0)
 	case "claudecode":
 		resp, err = generateClaudeCode(ctx, cfg, history, systemPrompt, 0)
 	case "geminicli":
@@ -155,6 +157,8 @@ func GenerateSoul(ctx context.Context, cfg models.LLMConfig, name, personality, 
 		resp, err = generateAnthropic(ctx, cfg, history, systemPrompt, 0)
 	case "gemini":
 		resp, err = generateGemini(ctx, cfg, history, systemPrompt, 0)
+	case "openrouter":
+		resp, err = generateOpenRouter(ctx, cfg, history, systemPrompt, 0)
 	case "claudecode":
 		resp, err = generateClaudeCode(ctx, cfg, history, systemPrompt, 0)
 	case "geminicli":
@@ -204,6 +208,8 @@ func SummarizeTaskContext(ctx context.Context, cfg models.LLMConfig, taskName, t
 		resp, err = generateAnthropic(ctx, cfg, history, systemPrompt, 0)
 	case "gemini":
 		resp, err = generateGemini(ctx, cfg, history, systemPrompt, 0)
+	case "openrouter":
+		resp, err = generateOpenRouter(ctx, cfg, history, systemPrompt, 0)
 	case "claudecode":
 		resp, err = generateClaudeCode(ctx, cfg, history, systemPrompt, 0)
 	case "geminicli":
