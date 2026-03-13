@@ -1,4 +1,4 @@
-.PHONY: build build-linux-amd64 build-darwin-arm64 build-windows-amd64 build-ui clean
+.PHONY: build build-linux-amd64 build-darwin-arm64 build-windows-amd64 build-darwin-desktop build-windows-desktop build-ui clean
 
 # Default build task
 all: build-ui build-linux-amd64 build-darwin-arm64 build-windows-amd64
@@ -59,7 +59,7 @@ build-windows-amd64: build-ui
 	@echo "========================================"
 
 # Desktop client build using Wails v3
-build-darwin-desktop: build-ui
+build-darwin-desktop:
 	@echo "========================================"
 	@echo "3. Compiling shachiku-desktop (Darwin arm64)..."
 	@echo "========================================"
@@ -84,6 +84,19 @@ build-darwin-desktop: build-ui
 	@echo "========================================"
 	@echo "✨ Desktop builds complete!"
 	@echo "🎯 Executable path: dist/"
+	@echo "========================================"
+
+# Desktop client build using Wails v3 (Windows)
+build-windows-desktop:
+	@echo "========================================"
+	@echo "3. Compiling shachiku-desktop (Windows amd64)..."
+	@echo "========================================"
+	mkdir -p dist
+	cd shachiku-desktop && wails3 task windows:build ARCH=amd64
+	cp -a shachiku-desktop/bin/shachiku-desktop.exe dist/Shachiku.exe
+	@echo "========================================"
+	@echo "✨ Windows Desktop build complete!"
+	@echo "🎯 Executable path: dist/Shachiku.exe"
 	@echo "========================================"
 
 # Clean build artifacts
