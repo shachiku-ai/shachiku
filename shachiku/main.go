@@ -33,8 +33,8 @@ func main() {
 	// Initialize API Routes
 	r := api.SetupRoutes()
 
-	certPath := filepath.Join(config.GetDataDir(), "certificate.crt")
-	keyPath := filepath.Join(config.GetDataDir(), "private.key")
+	certPath := filepath.Join(config.GetCertDir(), "certificate.crt")
+	keyPath := filepath.Join(config.GetCertDir(), "private.key")
 
 	if _, err := os.Stat(certPath); err == nil {
 		if _, err := os.Stat(keyPath); err == nil {

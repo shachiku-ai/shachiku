@@ -142,14 +142,14 @@ func ApplyCertificate(domain, email string) error {
 	}
 
 	// ensure data dir exists
-	os.MkdirAll(appconfig.GetDataDir(), 0755)
+	os.MkdirAll(appconfig.GetCertDir(), 0755)
 
-	err = os.WriteFile(filepath.Join(appconfig.GetDataDir(), "certificate.crt"), certificates.Certificate, 0644)
+	err = os.WriteFile(filepath.Join(appconfig.GetCertDir(), "certificate.crt"), certificates.Certificate, 0644)
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile(filepath.Join(appconfig.GetDataDir(), "private.key"), certificates.PrivateKey, 0600)
+	err = os.WriteFile(filepath.Join(appconfig.GetCertDir(), "private.key"), certificates.PrivateKey, 0600)
 	if err != nil {
 		return err
 	}
@@ -166,11 +166,11 @@ func InitCertificate() {
 	go StartCertificateRenewalLoop()
 
 	// Skip if cert already exists to avoid redundant calls to Let's Encrypt
-	certPath := filepath.Join(appconfig.GetDataDir(), "certificate.crt")
-	keyPath := filepath.Join(appconfig.GetDataDir(), "private.key")
+	certPath := filepath.Join(appconfig.GetCertDir(), "certificate.crt")
+	keyPath := filepath.Join(appconfig.GetCertDir(), "private.key")
 	if _, err := os.Stat(certPath); err == nil {
 		if _, err := os.Stat(keyPath); err == nil {
-			log.Println("ssl: Certificate already exists in data directory, skipping generation")
+			log.Println("ssl: Certificate already exists in cert directory, skipping generation")
 			return
 		}
 	}
@@ -204,7 +204,7 @@ func StartCertificateRenewalLoop() {
 }
 
 func CheckAndRenewCertificate() {
-	certFile := filepath.Join(appconfig.GetDataDir(), "certificate.crt")
+	certFile := filepath.Join(appconfig.GetCertDir(), "certificate.crt")
 	certBytes, err := os.ReadFile(certFile)
 	if err != nil {
 		return

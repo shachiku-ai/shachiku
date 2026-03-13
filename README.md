@@ -41,7 +41,7 @@ The project adopts a decoupled frontend and backend architecture and is ultimate
   The frontend is based on shadcn/ui, natively supporting responsive layouts and dark/light modes. Supports multi-language interface switching (English/Chinese/Japanese). It can connect freely to major providers offering compatible interfaces (such as OpenAI, Gemini, Claude).
 
 - 🔒 **Automated HTTPS**
-  Includes HTTPS support based on Let's Encrypt or reading existing local certificates. Just place your `certificate.crt` and `private.key` in the `~/.shachiku/data` directory, and the application will automatically enable secure connections and serve on port 443.
+  Includes HTTPS support based on Let's Encrypt or reading existing local certificates. Just place your `certificate.crt` and `private.key` in the `~/.cert/shachiku` directory, and the application will automatically enable secure connections and serve on port 443.
 
 ---
 
@@ -97,7 +97,7 @@ After building, go to the root directory or copy the executable program inside `
 After the program starts, it will automatically read or generate the `~/.shachiku/data` directory to store all localized databases and uploaded data.
 Visit [http://localhost:8080](http://localhost:8080) in your browser to see the beautiful frontend main application!
 
-> **Security Tip**: If `~/.shachiku/data/certificate.crt` and `~/.shachiku/data/private.key` are placed, it will automatically switch to run on the `:443` HTTPS port.
+> **Security Tip**: If `~/.cert/shachiku/certificate.crt` and `~/.cert/shachiku/private.key` are placed, it will automatically switch to run on the `:443` HTTPS port.
 
 ---
 

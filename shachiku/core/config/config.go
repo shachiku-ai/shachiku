@@ -18,3 +18,17 @@ func GetDataDir() string {
 	}
 	return filepath.Join(homeDir, ".shachiku", "data")
 }
+
+// GetCertDir returns the base directory for shachiku certificates.
+// By default, it maps to ~/.cert/shachiku
+func GetCertDir() string {
+	certDir := os.Getenv("SHACHIKU_CERT_DIR")
+	if certDir != "" {
+		return certDir
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join(GetDataDir(), "certs")
+	}
+	return filepath.Join(homeDir, ".cert", "shachiku")
+}
