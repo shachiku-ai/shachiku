@@ -171,5 +171,12 @@
     "setupAuth.confirmPassword": "パスワード確認",
     "setupAuth.submit": "設定を完了する",
     "setupAuth.pwdMismatch": "パスワードが一致しません",
-    "setupAuth.networkError": "ネットワークエラーが発生しました"
+    "setupAuth.networkError": "ネットワークエラーが発生しました",
+    "errors.unknown": "不明なエラー",
+    "errors.invalidApiKey": "無効なAPIキーが提供されました。認証情報を確認してください。",
+    "errors.networkError": "ネットワーク接続に失敗しました。インターネットまたはプロキシの設定を確認してください。",
+    "errors.apiKeyRequired": "モデルを取得するにはAPIキーが必要です。",
+    "errors.openaiError": "OpenAI APIキーの検証に失敗しました: ",
+    "errors.geminiError": "Gemini APIキーの検証に失敗しました: ",
+    "errors.unsupportedProvider": "サポートされていないプロバイダーです。"
 }

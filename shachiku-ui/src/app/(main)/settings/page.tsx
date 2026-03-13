@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { API_URL } from "@/lib/api"
+import { getProviderErrorMsg } from "@/lib/utils"
 import { SiteHeader } from "@/components/site-header"
 import { Check } from "lucide-react"
 
@@ -121,7 +122,7 @@ export default function SettingsPage() {
         } catch (err: unknown) {
             console.error(err)
             if (err instanceof Error) {
-                setStatus(err.message || t("settings.failedVerify", "Failed to verify API Key"))
+                setStatus(getProviderErrorMsg(t, err.message) || t("settings.failedVerify", "Failed to verify API Key"))
             } else {
                 setStatus(t("settings.failedVerify", "Failed to verify API Key"))
             }

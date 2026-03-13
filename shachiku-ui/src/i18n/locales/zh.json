@@ -171,5 +171,12 @@
     "setupAuth.confirmPassword": "确认密码",
     "setupAuth.submit": "完成设置",
     "setupAuth.pwdMismatch": "密码不相符",
-    "setupAuth.networkError": "发生网络错误"
+    "setupAuth.networkError": "发生网络错误",
+    "errors.unknown": "未知错误",
+    "errors.invalidApiKey": "提供的 API 密钥无效或未授权。请检查您的配置。",
+    "errors.networkError": "网络连接失败。请检查您的网络或代理设置。",
+    "errors.apiKeyRequired": "获取模型需要提供 API 密钥。",
+    "errors.openaiError": "验证 OpenAI API 密钥失败: ",
+    "errors.geminiError": "验证 Gemini API 密钥失败: ",
+    "errors.unsupportedProvider": "当前配置的提供商不受支持。"
 }

@@ -171,5 +171,12 @@
     "setupAuth.confirmPassword": "Confirm Password",
     "setupAuth.submit": "Complete Setup",
     "setupAuth.pwdMismatch": "Passwords do not match",
-    "setupAuth.networkError": "Network error occurred"
+    "setupAuth.networkError": "Network error occurred",
+    "errors.unknown": "Unknown error",
+    "errors.invalidApiKey": "Invalid API Key provided. Please check your credentials.",
+    "errors.networkError": "Network connection failed. Please check your internet or proxy settings.",
+    "errors.apiKeyRequired": "API Key is required to fetch models.",
+    "errors.openaiError": "Failed to verify OpenAI API Key: ",
+    "errors.geminiError": "Failed to verify Gemini API Key: ",
+    "errors.unsupportedProvider": "Unsupported AI provider configured."
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { API_URL } from "@/lib/api"
+import { getProviderErrorMsg } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -160,13 +161,13 @@ export default function OnboardingPage() {
                         </span>
                     )
                 } else {
-                    setAlertMessage(t("onboarding.providerVerificationFailed", "Provider verification failed: ") + (data.error || "Unknown Error"))
+                    setAlertMessage(t("onboarding.providerVerificationFailed", "Provider verification failed: ") + "\n" + getProviderErrorMsg(t, data.error || "Unknown Error"))
                 }
             }
         } catch (err: unknown) {
             console.error(err)
             const msg = err instanceof Error ? err.message : String(err)
-            setAlertMessage(t("onboarding.providerVerificationError", "Error verifying provider: ") + msg)
+            setAlertMessage(t("onboarding.providerVerificationError", "Error verifying provider: ") + "\n" + getProviderErrorMsg(t, msg))
         } finally {
             setLoading(false)
         }
