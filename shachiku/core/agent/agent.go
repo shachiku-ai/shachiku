@@ -268,11 +268,11 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 
 			ctxHistory = append(ctxHistory, models.Message{Role: "agent", Content: reply})
 
-			systemPrompt := fmt.Sprintf("You just executed the action/skill '%s'.\nThe result was:\n--------\n%s\n--------\nAnalyze the result. If you need to perform MORE actions to accomplish the user's goal, output the NEXT JSON action. If the task is fully complete, provide the final response to the user in a natural, conversational way without outputting any JSON. IMPORTANT: The final response MUST explicitly contain the exact details, prices, or data found in the result. DO NOT just summarize; provide the actual data. Do NOT include any 'Thought process:' or internal thinking in your final response—just directly address the user. Ensure your final response tone, language, and personality strictly match any preferences or personality traits found in your long-term memory context.", agentAction.Action, executionResult)
-			ctxHistory = append(ctxHistory, models.Message{Role: "user", Content: systemPrompt})
+			toolResultMsg := fmt.Sprintf("<tool_output name=\"%s\">\n%s\n</tool_output>", agentAction.Action, executionResult)
+			ctxHistory = append(ctxHistory, models.Message{Role: "user", Content: toolResultMsg})
 		} else if strings.HasPrefix(strings.TrimSpace(jsonStr), "{") && strings.HasSuffix(strings.TrimSpace(jsonStr), "}") {
 			ctxHistory = append(ctxHistory, models.Message{Role: "agent", Content: reply})
-			ctxHistory = append(ctxHistory, models.Message{Role: "user", Content: fmt.Sprintf("System: Your JSON failed to parse. Error: %v. Please make sure to output valid JSON. Do not write raw objects inside strings without escaping, and ensure the JSON is fully closed.", jsonErr)})
+			ctxHistory = append(ctxHistory, models.Message{Role: "user", Content: fmt.Sprintf("<system_error>\nYour JSON failed to parse. Error: %v. Please make sure to output valid JSON. Do not write raw objects inside strings without escaping, and ensure the JSON is fully closed.\n</system_error>", jsonErr)})
 			continue
 		} else {
 			// Model exited the loop intentionally or didn't output JSON.
@@ -280,7 +280,7 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 		}
 
 		if i == maxIterations-1 {
-			tempCtx := append(ctxHistory, models.Message{Role: "user", Content: fmt.Sprintf("System: You have reached the maximum safety limit for automated steps (%d iterations). Please immediately provide a final conversational summary of your progress to the user. DO NOT output any JSON actions anymore.", maxIterations)})
+			tempCtx := append(ctxHistory, models.Message{Role: "user", Content: fmt.Sprintf("<system_warning>\nYou have reached the maximum safety limit for automated steps (%d iterations). Please immediately provide a final conversational summary of your progress to the user. DO NOT output any JSON actions anymore.\n</system_warning>", maxIterations)})
 			forcedReply, err := provider.GenerateResponse(ctx, cfg, tempCtx, availableSkills, memoryContext, 0)
 			if err == nil && forcedReply != "" {
 				finalReply = forcedReply
