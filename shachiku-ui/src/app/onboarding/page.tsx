@@ -22,6 +22,9 @@ type ConfigState = {
     local_endpoint: string
     telegram_bot_token: string
     allowed_telegram_users: string
+    discord_bot_token: string
+    allowed_discord_users: string
+    channel_provider: string
     ai_name: string
     ai_personality: string
     ai_role: string
@@ -60,6 +63,9 @@ export default function OnboardingPage() {
         local_endpoint: "",
         telegram_bot_token: "",
         allowed_telegram_users: "",
+        discord_bot_token: "",
+        allowed_discord_users: "",
+        channel_provider: "telegram",
         ai_name: "",
         ai_personality: "",
         ai_role: "",
@@ -216,7 +222,7 @@ export default function OnboardingPage() {
     const completeSetup = async (skipTelegram = false) => {
         const finalConfig = { ...config, setup_completed: true }
         if (skipTelegram) {
-            finalConfig.telegram_bot_token = ""
+            finalConfig.channel_provider = "none"
         }
 
         setLoading(true)
@@ -269,7 +275,7 @@ export default function OnboardingPage() {
                         { num: 1, label: t("onboarding.step1", "Model") },
                         { num: 2, label: t("onboarding.step2", "Identity") },
                         { num: 3, label: t("onboarding.step3", "Soul") },
-                        { num: 4, label: t("onboarding.step4", "Telegram") },
+                        { num: 4, label: t("onboarding.step4", "Channel") },
                         { num: 5, label: t("onboarding.step5", "Finish") }
                     ].map(s => (
                         <div key={s.num} className="flex flex-col items-center pb-1 relative z-10 bg-muted/30 px-2 rounded-md">
@@ -440,35 +446,76 @@ export default function OnboardingPage() {
                     {step === 5 && (
                         <>
                             <CardHeader>
-                                <CardTitle>{t("onboarding.step4Title", "4. Extension: Telegram Module")}</CardTitle>
-                                <CardDescription>{t("onboarding.step4Desc", "Optionally bind your agent to a Telegram Bot for mobile chat access.")}</CardDescription>
+                                <CardTitle>{t("onboarding.step4Title", "4. Extension: External Channel")}</CardTitle>
+                                <CardDescription>{t("onboarding.step4Desc", "Optionally bind your agent to an external channel like Telegram or Discord for mobile chat access.")}</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">{t("onboarding.tgToken", "Telegram Bot Token (Optional)")}</label>
-                                    <Input
-                                        type="password"
-                                        placeholder={t("onboarding.tgTokenPh", "123456789:ABCDEF.......")}
-                                        value={config.telegram_bot_token}
-                                        onChange={(e) => setConfig(prev => ({ ...prev, telegram_bot_token: e.target.value }))}
-                                    />
-                                    <p className="text-xs text-muted-foreground">{t("onboarding.tgTokenDesc", "Get this from @BotFather on Telegram. You can skip this.")}</p>
+                                    <label className="text-sm font-medium">{t("onboarding.channelProvider", "Channel Provider")}</label>
+                                    <select
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                                        value={config.channel_provider}
+                                        onChange={(e) => setConfig(prev => ({ ...prev, channel_provider: e.target.value }))}
+                                    >
+                                        <option value="none">{t("onboarding.channelNone", "None (UI Only)")}</option>
+                                        <option value="telegram">Telegram</option>
+                                        <option value="discord">Discord</option>
+                                    </select>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">{t("onboarding.tgUsers", "Allowed Telegram Usernames")}</label>
-                                    <Input
-                                        placeholder={t("onboarding.tgUsersPh", "e.g. user1,user2 (leave blank to allow all)")}
-                                        value={config.allowed_telegram_users}
-                                        onChange={(e) => setConfig(prev => ({ ...prev, allowed_telegram_users: e.target.value }))}
-                                    />
-                                    <p className="text-xs text-muted-foreground">{t("onboarding.tgUsersDesc", "Comma-separated list of Telegram handles to restrict access.")}</p>
-                                </div>
+
+                                {config.channel_provider === "telegram" && (
+                                    <>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">{t("onboarding.tgToken", "Telegram Bot Token (Optional)")}</label>
+                                            <Input
+                                                type="password"
+                                                placeholder={t("onboarding.tgTokenPh", "123456789:ABCDEF.......")}
+                                                value={config.telegram_bot_token}
+                                                onChange={(e) => setConfig(prev => ({ ...prev, telegram_bot_token: e.target.value }))}
+                                            />
+                                            <p className="text-xs text-muted-foreground">{t("onboarding.tgTokenDesc", "Get this from @BotFather on Telegram. You can skip this.")}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">{t("onboarding.tgUsers", "Allowed Telegram Usernames")}</label>
+                                            <Input
+                                                placeholder={t("onboarding.tgUsersPh", "e.g. user1,user2 (leave blank to allow all)")}
+                                                value={config.allowed_telegram_users}
+                                                onChange={(e) => setConfig(prev => ({ ...prev, allowed_telegram_users: e.target.value }))}
+                                            />
+                                            <p className="text-xs text-muted-foreground">{t("onboarding.tgUsersDesc", "Comma-separated list of Telegram handles to restrict access.")}</p>
+                                        </div>
+                                    </>
+                                )}
+
+                                {config.channel_provider === "discord" && (
+                                    <>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">{t("onboarding.discordToken", "Discord Bot Token (Optional)")}</label>
+                                            <Input
+                                                type="password"
+                                                placeholder={t("onboarding.discordTokenPh", "MTA.......")}
+                                                value={config.discord_bot_token}
+                                                onChange={(e) => setConfig(prev => ({ ...prev, discord_bot_token: e.target.value }))}
+                                            />
+                                            <p className="text-xs text-muted-foreground">{t("onboarding.discordTokenDesc", "Get this from Discord Developer Portal. You can skip this.")}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">{t("onboarding.discordUsers", "Allowed Discord Users")}</label>
+                                            <Input
+                                                placeholder={t("onboarding.discordUsersPh", "e.g. user1,user2 (leave blank to allow all)")}
+                                                value={config.allowed_discord_users}
+                                                onChange={(e) => setConfig(prev => ({ ...prev, allowed_discord_users: e.target.value }))}
+                                            />
+                                            <p className="text-xs text-muted-foreground">{t("onboarding.discordUsersDesc", "Comma-separated list of Discord handles/IDs to restrict access.")}</p>
+                                        </div>
+                                    </>
+                                )}
                             </CardContent>
                             <CardFooter className="flex flex-col sm:flex-row justify-between border-t p-6 gap-4">
                                 <Button variant="outline" onClick={() => setStep(4)} className="w-full sm:w-auto">{t("onboarding.backBtn", "Back")}</Button>
                                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                                     <Button variant="secondary" onClick={() => completeSetup(true)} disabled={loading} className="w-full sm:w-auto">
-                                        <SkipForwardIcon className="mr-2 h-4 w-4" /> {t("onboarding.skipTg", "Skip Telegram")}
+                                        <SkipForwardIcon className="mr-2 h-4 w-4" /> {t("onboarding.skipChannel", "Skip Channel")}
                                     </Button>
                                     <Button onClick={() => completeSetup(false)} disabled={loading} className="w-full sm:w-auto">
                                         {loading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}

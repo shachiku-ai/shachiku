@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 
 	"shachiku/core/api"
+	"shachiku/core/channel"
 	"shachiku/core/config"
 	"shachiku/core/memory"
 	"shachiku/core/scheduler"
 	"shachiku/core/ssl"
-	"shachiku/core/telegram"
 )
 
 var Version = "dev"
@@ -26,11 +26,11 @@ func main() {
 	// Start scheduled tasks (Cron)
 	scheduler.Init()
 
-	// Initialize Telegram Bot Watcher
-	telegram.Init()
+	// Initialize Channel Bot Watcher
+	channel.Init()
 
-	// Wire background notifications to Telegram
-	scheduler.NotificationCallback = telegram.SendNotification
+	// Wire background notifications to Channel
+	scheduler.NotificationCallback = channel.SendNotification
 
 	// Initialize API Routes
 	r := api.SetupRoutes()

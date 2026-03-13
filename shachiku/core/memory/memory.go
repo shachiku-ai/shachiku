@@ -211,7 +211,15 @@ func GetLLMConfig() models.LLMConfig {
 		}
 	} else {
 		cfg.Provider = "openai"
+		cfg.ChannelProvider = "telegram"
 		cfg.MaxIterations = 50
+	}
+
+	if cfg.ChannelProvider == "" && cfg.TelegramBotToken != "" {
+		cfg.ChannelProvider = "telegram"
+	} else if cfg.ChannelProvider == "" {
+		// Default to telegram if empty
+		cfg.ChannelProvider = "telegram"
 	}
 	return cfg
 }

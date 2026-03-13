@@ -22,6 +22,9 @@ export default function SettingsPage() {
         local_endpoint: "",
         telegram_bot_token: "",
         allowed_telegram_users: "",
+        discord_bot_token: "",
+        allowed_discord_users: "",
+        channel_provider: "telegram",
         ai_name: "",
         ai_personality: "",
         ai_role: "",
@@ -53,6 +56,9 @@ export default function SettingsPage() {
                     local_endpoint: data.local_endpoint || "",
                     telegram_bot_token: data.telegram_bot_token || "",
                     allowed_telegram_users: data.allowed_telegram_users || "",
+                    discord_bot_token: data.discord_bot_token || "",
+                    allowed_discord_users: data.allowed_discord_users || "",
+                    channel_provider: data.channel_provider || "telegram",
                     ai_name: data.ai_name || "",
                     ai_personality: data.ai_personality || "",
                     ai_role: data.ai_role || "",
@@ -189,6 +195,12 @@ export default function SettingsPage() {
                                 className={`text-left px-4 py-2.5 rounded-md font-medium text-sm transition-colors ${activeTab === "agent" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
                             >
                                 {t("settings.agentSettings", "Agent Settings")}
+                            </button>
+                            <button
+                                onClick={() => { setActiveTab("channel"); setStatus(""); setIsSaved(false); }}
+                                className={`text-left px-4 py-2.5 rounded-md font-medium text-sm transition-colors ${activeTab === "channel" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
+                            >
+                                {t("settings.channelSettings", "External Channel")}
                             </button>
                         </nav>
                     </aside>
@@ -401,33 +413,101 @@ export default function SettingsPage() {
                                     </p>
                                 </div>
 
-                                <div className="grid gap-2">
-                                    <label className="text-sm font-medium">{t("settings.telegramBotToken", "Telegram Bot Token")}</label>
-                                    <input
-                                        type="password"
-                                        placeholder={t("settings.telegramTokenPlaceholder", "Enter Telegram Bot Token (optional)...")}
-                                        className="border rounded-md px-3 py-2 text-sm bg-transparent"
-                                        value={config.telegram_bot_token || ""}
-                                        onChange={e => setConfig({ ...config, telegram_bot_token: e.target.value })}
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        {t("settings.telegramTokenDesc", "If configured, the agent will reply to messages sent to this Telegram bot.")}
-                                    </p>
+                                <div className="flex items-center justify-between mt-4 border-t pt-4">
+                                    <span className="text-sm text-red-500">
+                                        {status}
+                                    </span>
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={isSaving || isSaved}
+                                        className="bg-black dark:bg-white text-white dark:text-black py-2 px-4 rounded-md text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center min-w-[140px] min-h-[40px] disabled:opacity-50"
+                                    >
+                                        {isSaved ? <Check className="w-5 h-5" /> : (isSaving ? t("settings.saving", "Saving...") : t("settings.saveSettings", "Save Settings"))}
+                                    </button>
                                 </div>
+                            </div>
+                        )}
+
+                        {activeTab === "channel" && (
+                            <div className="flex flex-col gap-6 w-full rounded-lg border shadow-sm p-6 relative">
+                                <h3 className="text-xl font-bold">{t("settings.channelSettings", "External Channel Configuration")}</h3>
 
                                 <div className="grid gap-2">
-                                    <label className="text-sm font-medium">{t("settings.allowedTelegramUsers", "Allowed Telegram Users")}</label>
-                                    <input
-                                        type="text"
-                                        placeholder={t("settings.allowedUsersPlaceholder", "alice,bob")}
+                                    <label className="text-sm font-medium">{t("settings.channelProvider", "External Channel Provider")}</label>
+                                    <select
                                         className="border rounded-md px-3 py-2 text-sm bg-transparent"
-                                        value={config.allowed_telegram_users || ""}
-                                        onChange={e => setConfig({ ...config, allowed_telegram_users: e.target.value })}
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        {t("settings.allowedUsersDesc", "Comma-separated list of allowed Telegram usernames. Leave empty to allow any user.")}
-                                    </p>
+                                        value={config.channel_provider}
+                                        onChange={e => setConfig({ ...config, channel_provider: e.target.value })}
+                                    >
+                                        <option value="none">{t("settings.channelNone", "None (UI Only)")}</option>
+                                        <option value="telegram">Telegram</option>
+                                        <option value="discord">Discord</option>
+                                    </select>
                                 </div>
+
+                                {config.channel_provider === "telegram" && (
+                                    <>
+                                        <div className="grid gap-2">
+                                            <label className="text-sm font-medium">{t("settings.telegramBotToken", "Telegram Bot Token")}</label>
+                                            <input
+                                                type="password"
+                                                placeholder={t("settings.telegramTokenPlaceholder", "Enter Telegram Bot Token (optional)...")}
+                                                className="border rounded-md px-3 py-2 text-sm bg-transparent"
+                                                value={config.telegram_bot_token || ""}
+                                                onChange={e => setConfig({ ...config, telegram_bot_token: e.target.value })}
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                {t("settings.telegramTokenDesc", "If configured, the agent will reply to messages sent to this Telegram bot.")}
+                                            </p>
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <label className="text-sm font-medium">{t("settings.allowedTelegramUsers", "Allowed Telegram Users")}</label>
+                                            <input
+                                                type="text"
+                                                placeholder={t("settings.allowedUsersPlaceholder", "alice,bob")}
+                                                className="border rounded-md px-3 py-2 text-sm bg-transparent"
+                                                value={config.allowed_telegram_users || ""}
+                                                onChange={e => setConfig({ ...config, allowed_telegram_users: e.target.value })}
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                {t("settings.allowedUsersDesc", "Comma-separated list of allowed Telegram usernames. Leave empty to allow any user.")}
+                                            </p>
+                                        </div>
+                                    </>
+                                )}
+
+                                {config.channel_provider === "discord" && (
+                                    <>
+                                        <div className="grid gap-2">
+                                            <label className="text-sm font-medium">{t("settings.discordBotToken", "Discord Bot Token")}</label>
+                                            <input
+                                                type="password"
+                                                placeholder={t("settings.discordTokenPlaceholder", "Enter Discord Bot Token...")}
+                                                className="border rounded-md px-3 py-2 text-sm bg-transparent"
+                                                value={config.discord_bot_token || ""}
+                                                onChange={e => setConfig({ ...config, discord_bot_token: e.target.value })}
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                {t("settings.discordTokenDesc", "If configured, the agent will reply to messages sent to this Discord bot.")}
+                                            </p>
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <label className="text-sm font-medium">{t("settings.allowedDiscordUsers", "Allowed Discord Users/Channels")}</label>
+                                            <input
+                                                type="text"
+                                                placeholder={t("settings.allowedDiscordUsersPlaceholder", "alice,bob")}
+                                                className="border rounded-md px-3 py-2 text-sm bg-transparent"
+                                                value={config.allowed_discord_users || ""}
+                                                onChange={e => setConfig({ ...config, allowed_discord_users: e.target.value })}
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                {t("settings.allowedDiscordUsersDesc", "Comma-separated list of allowed Discord usernames or User IDs. Leave empty to allow any user.")}
+                                            </p>
+                                        </div>
+                                    </>
+                                )}
 
                                 <div className="flex items-center justify-between mt-4">
                                     <span className="text-sm text-red-500">

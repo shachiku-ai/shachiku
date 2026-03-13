@@ -43,6 +43,9 @@ type LLMConfig struct {
 	LocalEndpoint        string `json:"local_endpoint"`
 	TelegramBotToken     string `json:"telegram_bot_token"`
 	AllowedTelegramUsers string `json:"allowed_telegram_users"`
+	DiscordBotToken      string `json:"discord_bot_token"`
+	AllowedDiscordUsers  string `json:"allowed_discord_users"`
+	ChannelProvider      string `json:"channel_provider"`
 	MaxIterations        int    `json:"max_iterations"`
 	AIName               string `json:"ai_name"`
 	AIPersonality        string `json:"ai_personality"`
