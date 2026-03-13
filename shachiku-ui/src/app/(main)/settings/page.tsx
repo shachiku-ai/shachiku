@@ -15,6 +15,7 @@ export default function SettingsPage() {
         openai_api_key: "",
         anthropic_api_key: "",
         gemini_api_key: "",
+        openrouter_api_key: "",
         local_api_key: "",
         local_endpoint: "",
         telegram_bot_token: "",
@@ -45,6 +46,7 @@ export default function SettingsPage() {
                     openai_api_key: data.openai_api_key || "",
                     anthropic_api_key: data.anthropic_api_key || "",
                     gemini_api_key: data.gemini_api_key || "",
+                    openrouter_api_key: data.openrouter_api_key || "",
                     local_api_key: data.local_api_key || "",
                     local_endpoint: data.local_endpoint || "",
                     telegram_bot_token: data.telegram_bot_token || "",
@@ -63,6 +65,7 @@ export default function SettingsPage() {
     const getActiveKey = () => {
         if (config.provider === "claude") return config.anthropic_api_key
         if (config.provider === "gemini") return config.gemini_api_key
+        if (config.provider === "openrouter") return config.openrouter_api_key
         return config.openai_api_key
     }
 
@@ -71,6 +74,8 @@ export default function SettingsPage() {
             setConfig({ ...config, anthropic_api_key: val })
         } else if (config.provider === "gemini") {
             setConfig({ ...config, gemini_api_key: val })
+        } else if (config.provider === "openrouter") {
+            setConfig({ ...config, openrouter_api_key: val })
         } else {
             setConfig({ ...config, openai_api_key: val })
         }
@@ -206,6 +211,7 @@ export default function SettingsPage() {
                                                 <option value="openai">{t("settings.openai", "OpenAI")}</option>
                                                 <option value="claude">{t("settings.claude", "Anthropic (Claude)")}</option>
                                                 <option value="gemini">{t("settings.gemini", "Google (Gemini)")}</option>
+                                                <option value="openrouter">{t("settings.openrouter", "OpenRouter")}</option>
                                                 <option value="claudecode">{t("settings.claudecode", "Local (Claude Code)")}</option>
                                                 <option value="geminicli">{t("settings.geminicli", "Local (Gemini CLI)")}</option>
                                                 <option value="codexcli">{t("settings.codexcli", "Local (Codex CLI)")}</option>

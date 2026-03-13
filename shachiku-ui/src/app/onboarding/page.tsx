@@ -17,6 +17,7 @@ type ConfigState = {
     openai_api_key: string
     anthropic_api_key: string
     gemini_api_key: string
+    openrouter_api_key: string
     local_api_key: string
     local_endpoint: string
     telegram_bot_token: string
@@ -33,6 +34,7 @@ const PROVIDERS = [
     { id: "openai", name: "OpenAI" },
     { id: "claude", name: "Anthropic Claude" },
     { id: "gemini", name: "Google Gemini" },
+    { id: "openrouter", name: "OpenRouter" },
     { id: "local", name: "Local LLM" },
     { id: "claudecode", name: "Claude Code CLI" },
     { id: "geminicli", name: "Gemini CLI" },
@@ -53,6 +55,7 @@ export default function OnboardingPage() {
         openai_api_key: "",
         anthropic_api_key: "",
         gemini_api_key: "",
+        openrouter_api_key: "",
         local_api_key: "",
         local_endpoint: "",
         telegram_bot_token: "",
@@ -83,6 +86,7 @@ export default function OnboardingPage() {
             case "openai": return cfg.openai_api_key
             case "claude": return cfg.anthropic_api_key
             case "gemini": return cfg.gemini_api_key
+            case "openrouter": return cfg.openrouter_api_key
             case "local": return cfg.local_api_key
             default: return ""
         }
@@ -93,6 +97,7 @@ export default function OnboardingPage() {
             case "openai": setConfig(prev => ({ ...prev, openai_api_key: value })); break
             case "claude": setConfig(prev => ({ ...prev, anthropic_api_key: value })); break
             case "gemini": setConfig(prev => ({ ...prev, gemini_api_key: value })); break
+            case "openrouter": setConfig(prev => ({ ...prev, openrouter_api_key: value })); break
             case "local": setConfig(prev => ({ ...prev, local_api_key: value })); break
         }
     }

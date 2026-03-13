@@ -38,6 +38,7 @@ type LLMConfig struct {
 	OpenAIAPIKey         string `json:"openai_api_key"`
 	AnthropicAPIKey      string `json:"anthropic_api_key"`
 	GeminiAPIKey         string `json:"gemini_api_key"`
+	OpenRouterAPIKey     string `json:"openrouter_api_key"`
 	LocalAPIKey          string `json:"local_api_key"`
 	LocalEndpoint        string `json:"local_endpoint"`
 	TelegramBotToken     string `json:"telegram_bot_token"`

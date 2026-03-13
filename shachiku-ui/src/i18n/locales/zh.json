@@ -121,6 +121,7 @@
     "settings.openai": "OpenAI",
     "settings.claude": "Anthropic (Claude)",
     "settings.gemini": "Google (Gemini)",
+    "settings.openrouter": "OpenRouter",
     "settings.claudecode": "本地 (Claude Code)",
     "settings.geminicli": "本地 (Gemini CLI)",
     "settings.codexcli": "本地 (Codex CLI)",

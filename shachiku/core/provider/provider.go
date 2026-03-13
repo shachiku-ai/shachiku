@@ -32,6 +32,8 @@ func resolveProvider(cfg models.LLMConfig) string {
 			provider = "claude"
 		} else if os.Getenv("GEMINI_API_KEY") != "" || cfg.GeminiAPIKey != "" {
 			provider = "gemini"
+		} else if os.Getenv("OPENROUTER_API_KEY") != "" || cfg.OpenRouterAPIKey != "" {
+			provider = "openrouter"
 		} else {
 			provider = "openai" // default
 		}
@@ -58,6 +60,8 @@ func ExtractFacts(ctx context.Context, cfg models.LLMConfig, userInput string) (
 		resp, err = generateAnthropic(ctx, cfg, history, systemPrompt, 0)
 	case "gemini":
 		resp, err = generateGemini(ctx, cfg, history, systemPrompt, 0)
+	case "openrouter":
+		resp, err = generateOpenRouter(ctx, cfg, history, systemPrompt, 0)
 	case "claudecode":
 		resp, err = generateClaudeCode(ctx, cfg, history, systemPrompt, 0)
 	case "geminicli":
@@ -279,6 +283,8 @@ func GenerateResponse(ctx context.Context, cfg models.LLMConfig, history []model
 		return generateAnthropic(ctx, cfg, history, systemPrompt, taskID)
 	case "gemini":
 		return generateGemini(ctx, cfg, history, systemPrompt, taskID)
+	case "openrouter":
+		return generateOpenRouter(ctx, cfg, history, systemPrompt, taskID)
 	case "claudecode":
 		return generateClaudeCode(ctx, cfg, history, systemPrompt, taskID)
 	case "geminicli":
@@ -315,12 +321,14 @@ func FetchModels(providerName, apiKey string) ([]string, error) {
 	}
 
 	switch providerName {
-	case "openai", "local":
+	case "openai", "local", "openrouter":
 		if providerName == "local" && apiKey == "" {
 			apiKey = "dummy"
 		}
 		config := openai.DefaultConfig(apiKey)
-		if baseURL := os.Getenv("OPENAI_BASE_URL"); baseURL != "" {
+		if providerName == "openrouter" {
+			config.BaseURL = "https://openrouter.ai/api/v1"
+		} else if baseURL := os.Getenv("OPENAI_BASE_URL"); baseURL != "" {
 			config.BaseURL = baseURL
 		} else if providerName == "local" {
 			config.BaseURL = "http://localhost:11434/v1"
