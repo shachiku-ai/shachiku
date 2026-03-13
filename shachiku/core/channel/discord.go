@@ -59,6 +59,22 @@ func (m *DiscordModule) messageCreate(s *discordgo.Session, msg *discordgo.Messa
 	}
 
 	text := msg.Content
+
+	var attachedFiles []string
+	for _, attachment := range msg.Attachments {
+		if path, err := downloadFileToTmp(attachment.URL, attachment.Filename); err == nil {
+			attachedFiles = append(attachedFiles, path)
+		}
+	}
+
+	for _, f := range attachedFiles {
+		text += fmt.Sprintf("\n[User attached file: %s]", f)
+	}
+
+	if strings.TrimSpace(text) == "" {
+		return
+	}
+
 	username := msg.Author.Username
 	userID := msg.Author.ID
 

@@ -62,7 +62,10 @@ func (m *TelegramModule) listen(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case update := <-updates:
-			if update.Message == nil || update.Message.Text == "" {
+			if update.Message == nil {
+				continue
+			}
+			if update.Message.Text == "" && update.Message.Caption == "" && update.Message.Document == nil && len(update.Message.Photo) == 0 {
 				continue
 			}
 
@@ -74,6 +77,35 @@ func (m *TelegramModule) listen(ctx context.Context) {
 func (m *TelegramModule) handleMessage(msg *tgbotapi.Message) {
 	chatID := msg.Chat.ID
 	text := msg.Text
+	if text == "" && msg.Caption != "" {
+		text = msg.Caption
+	}
+
+	var attachedFiles []string
+
+	if msg.Document != nil {
+		fileURL, err := m.bot.GetFileDirectURL(msg.Document.FileID)
+		if err == nil {
+			if path, err := downloadFileToTmp(fileURL, msg.Document.FileName); err == nil {
+				attachedFiles = append(attachedFiles, path)
+			}
+		}
+	}
+
+	if len(msg.Photo) > 0 {
+		photo := msg.Photo[len(msg.Photo)-1]
+		fileURL, err := m.bot.GetFileDirectURL(photo.FileID)
+		if err == nil {
+			if path, err := downloadFileToTmp(fileURL, photo.FileID+".jpg"); err == nil {
+				attachedFiles = append(attachedFiles, path)
+			}
+		}
+	}
+
+	for _, f := range attachedFiles {
+		text += fmt.Sprintf("\n[User attached file: %s]", f)
+	}
+
 	username := msg.From.UserName
 
 	cfg := memory.GetLLMConfig()
