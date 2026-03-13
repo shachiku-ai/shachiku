@@ -35,7 +35,12 @@ jobs:
 
       - name: Build artifacts
         run: |
-          make all
+          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Building version $VERSION..."
+          sed -i -E "s/version: .*/version: \"$VERSION\"/" shachiku-desktop/build/config.yml
+          cd shachiku-desktop && wails3 task common:update:build-assets && cd ..
+          make all TARGET_VERSION=$GITHUB_REF_NAME
 
       - name: Release to GitHub
         uses: softprops/action-gh-release@v2
@@ -44,6 +49,8 @@ jobs:
             dist/shachiku-linux-amd64
             dist/shachiku-darwin-arm64
             dist/shachiku-windows-amd64.exe
+            dist/Shachiku.dmg
+            dist/Shachiku.exe
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

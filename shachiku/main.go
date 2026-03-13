@@ -13,10 +13,12 @@ import (
 	"shachiku/core/telegram"
 )
 
+var Version = "dev"
+
 func main() {
 	ssl.InitCertificate()
 
-	log.Println("Initializing AI Agent API...")
+	log.Printf("Initializing AI Agent API (Version: %s)...", Version)
 
 	// Initialize long-term memory (Qdrant)
 	memory.Init()

@@ -15,10 +15,12 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+var Version = "dev"
+
 func main() {
 	ssl.InitCertificate()
 
-	log.Println("Initializing AI Agent API for Desktop...")
+	log.Printf("Initializing AI Agent API for Desktop (Version: %s)...", Version)
 
 	// Initialize long-term memory (Qdrant/SQLite)
 	memory.Init()

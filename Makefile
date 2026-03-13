@@ -1,5 +1,9 @@
 .PHONY: build build-linux-amd64 build-darwin-arm64 build-windows-amd64 build-darwin-desktop build-windows-desktop build-ui clean
 
+TARGET_VERSION ?= dev
+VERSION ?= $(patsubst v%,%,$(TARGET_VERSION))
+LDFLAGS := -ldflags="-X main.Version=$(VERSION)"
+
 # Default build task
 all: build-ui build-linux-amd64 build-darwin-arm64 build-windows-amd64 build-darwin-desktop build-windows-desktop
 
@@ -25,7 +29,7 @@ build-linux-amd64:
 	@echo "3. Compiling shachiku to dist directory (Linux amd64)..."
 	@echo "========================================"
 	mkdir -p dist
-	cd shachiku && go mod tidy && GOOS=linux GOARCH=amd64 go build -o ../dist/shachiku-linux-amd64 main.go
+	cd shachiku && go mod tidy && GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o ../dist/shachiku-linux-amd64 main.go
 	@echo "========================================"
 	@echo "✨ Linux amd64 build complete!"
 	@echo "🎯 Executable path: dist/shachiku-linux-amd64"
@@ -38,7 +42,7 @@ build-darwin-arm64:
 	@echo "3. Compiling shachiku to dist directory (Darwin arm64)..."
 	@echo "========================================"
 	mkdir -p dist
-	cd shachiku && go mod tidy && GOOS=darwin GOARCH=arm64 go build -o ../dist/shachiku-darwin-arm64 main.go
+	cd shachiku && go mod tidy && GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o ../dist/shachiku-darwin-arm64 main.go
 	@echo "========================================"
 	@echo "✨ Darwin arm64 build complete!"
 	@echo "🎯 Executable path: dist/shachiku-darwin-arm64"
@@ -51,7 +55,7 @@ build-windows-amd64:
 	@echo "3. Compiling shachiku to dist directory (Windows amd64)..."
 	@echo "========================================"
 	mkdir -p dist
-	cd shachiku && go mod tidy && GOOS=windows GOARCH=amd64 go build -o ../dist/shachiku-windows-amd64.exe main.go
+	cd shachiku && go mod tidy && GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o ../dist/shachiku-windows-amd64.exe main.go
 	@echo "========================================"
 	@echo "✨ Windows amd64 build complete!"
 	@echo "🎯 Executable path: dist/shachiku-windows-amd64.exe"
@@ -64,7 +68,7 @@ build-darwin-desktop:
 	@echo "3. Compiling shachiku-desktop (Darwin arm64)..."
 	@echo "========================================"
 	mkdir -p dist
-	cd shachiku-desktop && wails3 task darwin:package ARCH=arm64
+	cd shachiku-desktop && wails3 task darwin:package ARCH=arm64 LDFLAGS=$(LDFLAGS)
 	rm -rf dist/Shachiku.app
 	cp -a shachiku-desktop/bin/shachiku-desktop.app dist/Shachiku.app
 	@echo "========================================"
@@ -92,7 +96,7 @@ build-windows-desktop:
 	@echo "3. Compiling shachiku-desktop (Windows amd64)..."
 	@echo "========================================"
 	mkdir -p dist
-	cd shachiku-desktop && wails3 task windows:build ARCH=amd64
+	cd shachiku-desktop && wails3 task windows:build ARCH=amd64 LDFLAGS=$(LDFLAGS)
 	cp -a shachiku-desktop/bin/shachiku-desktop.exe dist/Shachiku.exe
 	@echo "========================================"
 	@echo "✨ Windows Desktop build complete!"
