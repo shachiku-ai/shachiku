@@ -58,6 +58,17 @@ build-windows-amd64: build-ui
 	@echo "💡 Tip: UI resources have been packed into the binary via go:embed"
 	@echo "========================================"
 
+# Desktop client build using Wails v3
+build-desktop: build-ui
+	@echo "========================================"
+	@echo "3. Compiling shachiku-desktop..."
+	@echo "========================================"
+	cd shachiku-desktop && wails3 build
+	@echo "========================================"
+	@echo "✨ Desktop build complete!"
+	@echo "🎯 Executable path: shachiku-desktop/bin/"
+	@echo "========================================"
+
 # Clean build artifacts
 clean:
 	@echo "Cleaning build directories..."

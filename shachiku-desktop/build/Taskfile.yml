@@ -1,0 +1,42 @@
+version: '3'
+
+tasks:
+  go:mod:tidy:
+    summary: Runs `go mod tidy`
+    internal: true
+    cmds:
+      - go mod tidy
+
+  install:frontend:deps:
+    summary: Install frontend dependencies
+    cmds:
+      - echo "Skipping frontend install since we embed Shachiku UI"
+
+  build:frontend:
+    summary: Build the frontend project
+    cmds:
+      - echo "Skipping frontend build since we embed Shachiku UI"
+
+  generate:bindings:
+    summary: Generates bindings for the frontend
+    cmds:
+      - echo "Skipping binding generation since we just proxy API"
+
+  generate:icons:
+    summary: Generates Windows `.ico` and Mac `.icns` from an image
+    dir: build
+    sources:
+      - "appicon.png"
+      - "appicon.icon"
+    generates:
+      - "darwin/icons.icns"
+      - "windows/icon.ico"
+    cmds:
+      - wails3 generate icons -input appicon.png -macfilename darwin/icons.icns -windowsfilename windows/icon.ico -iconcomposerinput appicon.icon -macassetdir darwin
+
+  update:build-assets:
+    summary: Updates the build assets
+    dir: build
+    cmds:
+      - wails3 update build-assets -name "{{.APP_NAME}}" -binaryname "{{.APP_NAME}}" -config config.yml -dir .
+

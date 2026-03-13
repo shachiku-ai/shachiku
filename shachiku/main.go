@@ -5,12 +5,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"shachiku/internal/api"
-	"shachiku/internal/config"
-	"shachiku/internal/memory"
-	"shachiku/internal/scheduler"
-	"shachiku/internal/ssl"
-	"shachiku/internal/telegram"
+	"shachiku/core/api"
+	"shachiku/core/config"
+	"shachiku/core/memory"
+	"shachiku/core/scheduler"
+	"shachiku/core/ssl"
+	"shachiku/core/telegram"
 )
 
 func main() {
