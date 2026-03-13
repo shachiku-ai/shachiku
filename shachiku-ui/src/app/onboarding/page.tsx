@@ -44,7 +44,7 @@ export default function OnboardingPage() {
     const [loading, setLoading] = useState(false)
     const [generating, setGenerating] = useState(false)
     const [models, setModels] = useState<string[]>([])
-    const [alertMessage, setAlertMessage] = useState<string | null>(null)
+    const [alertMessage, setAlertMessage] = useState<React.ReactNode | null>(null)
 
     const [config, setConfig] = useState<ConfigState>({
         provider: "openai",
@@ -130,6 +130,43 @@ export default function OnboardingPage() {
         } catch (err) {
             console.error(err)
             setModels([])
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleNextStep1 = async () => {
+        setLoading(true)
+        try {
+            const providerToUse = config.provider
+            const apiKeyToUse = getApiKeyForProvider(providerToUse)
+
+            const res = await fetch(`${API_URL}/models`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ provider: providerToUse, api_key: apiKeyToUse })
+            })
+            const data = await res.json()
+            if (res.ok && data.models && data.models.length > 0) {
+                setStep(2)
+            } else {
+                if (data.error && data.error.includes("CLI_NOT_INSTALLED")) {
+                    setAlertMessage(
+                        <span className="flex flex-col gap-2 pt-2">
+                            <span>{t("onboarding.cliNotFound", "The required CLI tool is not installed. Please install it to use this provider.")}</span>
+                            <a href="https://shachiku.ai/document" target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium break-all mt-1">
+                                https://shachiku.ai/document
+                            </a>
+                        </span>
+                    )
+                } else {
+                    setAlertMessage(t("onboarding.providerVerificationFailed", "Provider verification failed: ") + (data.error || "Unknown Error"))
+                }
+            }
+        } catch (err: unknown) {
+            console.error(err)
+            const msg = err instanceof Error ? err.message : String(err)
+            setAlertMessage(t("onboarding.providerVerificationError", "Error verifying provider: ") + msg)
         } finally {
             setLoading(false)
         }
@@ -310,7 +347,8 @@ export default function OnboardingPage() {
                                 </div>
                             </CardContent>
                             <CardFooter className="flex justify-end border-t p-6">
-                                <Button onClick={() => setStep(2)} disabled={!config.model || models.length === 0}>
+                                <Button onClick={handleNextStep1} disabled={!config.model || models.length === 0 || loading}>
+                                    {loading ? <Loader2Icon className="mr-2 h-4 w-4 animate-spin" /> : null}
                                     {t("onboarding.nextBtn", "Next Step")} <ArrowRightIcon className="ml-2 h-4 w-4" />
                                 </Button>
                             </CardFooter>

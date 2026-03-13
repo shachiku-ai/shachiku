@@ -27,7 +27,7 @@ export default function SettingsPage() {
     })
 
     const [step, setStep] = useState(1)
-    const [status, setStatus] = useState("")
+    const [status, setStatus] = useState<React.ReactNode | null>(null)
     const [isFetching, setIsFetching] = useState(false)
     const [modelsList, setModelsList] = useState<string[]>([])
     const [activeTab, setActiveTab] = useState("llm")
@@ -76,16 +76,8 @@ export default function SettingsPage() {
     }
 
     const handleNext = async () => {
-        if (config.provider === "claudecode" || config.provider === "geminicli" || config.provider === "codexcli") {
-            setStatus("")
-            setModelsList([`${config.provider}-local`])
-            setConfig(prev => ({ ...prev, model: `${config.provider}-local` }))
-            setStep(2)
-            return
-        }
-
         const apiKey = getActiveKey()
-        if (config.provider !== "local" && !apiKey) {
+        if (!["claudecode", "geminicli", "codexcli", "local"].includes(config.provider) && !apiKey) {
             setStatus(t("settings.apiKeyRequired", "API Key is required"))
             return
         }
@@ -105,6 +97,17 @@ export default function SettingsPage() {
 
             const data = await res.json()
             if (!res.ok) {
+                if (data.error && data.error.includes("CLI_NOT_INSTALLED")) {
+                    setStatus(
+                        <span className="flex flex-col gap-1 text-left">
+                            <span>{t("settings.cliNotFound", "The required CLI tool is not installed.")}</span>
+                            <a href="https://shachiku.ai/document" target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium break-all">
+                                https://shachiku.ai/document
+                            </a>
+                        </span>
+                    )
+                    return
+                }
                 throw new Error(data.error || "Failed to fetch models")
             }
 
@@ -236,7 +239,7 @@ export default function SettingsPage() {
                                             >
                                                 {isFetching ? t("settings.verifying", "Verifying...") : t("settings.next", "Next ->")}
                                             </button>
-                                            {status && <span className="text-sm text-red-500 max-w-[150px] truncate">{status}</span>}
+                                            {status && <div className="text-sm text-red-500 flex-1 ml-4">{status}</div>}
                                         </div>
                                     </>
                                 )}

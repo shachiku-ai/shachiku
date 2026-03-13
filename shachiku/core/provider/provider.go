@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -292,6 +293,20 @@ func GenerateResponse(ctx context.Context, cfg models.LLMConfig, history []model
 // FetchModels validates the corresponding API key and returns a list of available models.
 func FetchModels(providerName, apiKey string) ([]string, error) {
 	if providerName == "claudecode" || providerName == "geminicli" || providerName == "codexcli" {
+		var exeName string
+		switch providerName {
+		case "claudecode":
+			exeName = "npx" // claudecode is run via npx
+		case "geminicli":
+			exeName = "gemini"
+		case "codexcli":
+			exeName = "codex"
+		}
+
+		if _, err := exec.LookPath(exeName); err != nil {
+			return nil, fmt.Errorf("CLI_NOT_INSTALLED: %v executable not found", exeName)
+		}
+
 		return []string{fmt.Sprintf("%s-local", providerName)}, nil
 	}
 

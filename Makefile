@@ -1,7 +1,7 @@
 .PHONY: build build-linux-amd64 build-darwin-arm64 build-windows-amd64 build-darwin-desktop build-windows-desktop build-ui clean
 
 # Default build task
-all: build-ui build-linux-amd64 build-darwin-arm64 build-windows-amd64
+all: build-ui build-linux-amd64 build-darwin-arm64 build-windows-amd64 build-darwin-desktop build-windows-desktop
 
 build-ui:
 	@echo "========================================"
@@ -20,7 +20,7 @@ build-ui:
 	cp -r shachiku-ui/out/* shachiku/ui/dist/
 
 # Main compilation method: Cross-platform build (Linux AMD64)
-build-linux-amd64: build-ui
+build-linux-amd64:
 	@echo "========================================"
 	@echo "3. Compiling shachiku to dist directory (Linux amd64)..."
 	@echo "========================================"
@@ -33,7 +33,7 @@ build-linux-amd64: build-ui
 	@echo "========================================"
 
 # Main compilation method: Cross-platform build (Darwin ARM64 / Apple Silicon)
-build-darwin-arm64: build-ui
+build-darwin-arm64:
 	@echo "========================================"
 	@echo "3. Compiling shachiku to dist directory (Darwin arm64)..."
 	@echo "========================================"
@@ -46,7 +46,7 @@ build-darwin-arm64: build-ui
 	@echo "========================================"
 
 # Main compilation method: Cross-platform build (Windows AMD64)
-build-windows-amd64: build-ui
+build-windows-amd64:
 	@echo "========================================"
 	@echo "3. Compiling shachiku to dist directory (Windows amd64)..."
 	@echo "========================================"
