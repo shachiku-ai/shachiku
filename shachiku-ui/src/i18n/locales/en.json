@@ -179,5 +179,9 @@
     "errors.apiKeyRequired": "API Key is required to fetch models.",
     "errors.openaiError": "Failed to verify OpenAI API Key: ",
     "errors.geminiError": "Failed to verify Gemini API Key: ",
-    "errors.unsupportedProvider": "Unsupported AI provider configured."
+    "errors.unsupportedProvider": "Unsupported AI provider configured.",
+    "settings.theme": "Theme",
+    "settings.themeSystem": "System",
+    "settings.themeLight": "Light",
+    "settings.themeDark": "Dark"
 }

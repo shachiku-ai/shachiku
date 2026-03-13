@@ -179,5 +179,9 @@
     "errors.apiKeyRequired": "モデルを取得するにはAPIキーが必要です。",
     "errors.openaiError": "OpenAI APIキーの検証に失敗しました: ",
     "errors.geminiError": "Gemini APIキーの検証に失敗しました: ",
-    "errors.unsupportedProvider": "サポートされていないプロバイダーです。"
+    "errors.unsupportedProvider": "サポートされていないプロバイダーです。",
+    "settings.theme": "テーマ",
+    "settings.themeSystem": "システム",
+    "settings.themeLight": "ライト",
+    "settings.themeDark": "ダーク"
 }

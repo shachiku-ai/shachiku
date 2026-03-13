@@ -6,9 +6,11 @@ import { API_URL } from "@/lib/api"
 import { getProviderErrorMsg } from "@/lib/utils"
 import { SiteHeader } from "@/components/site-header"
 import { Check } from "lucide-react"
+import { useTheme } from "next-themes"
 
 export default function SettingsPage() {
     const { t, i18n } = useTranslation()
+    const { theme, setTheme } = useTheme()
     const [config, setConfig] = useState({
         provider: "openai",
         model: "",
@@ -369,6 +371,19 @@ export default function SettingsPage() {
                                         <option value="en">English</option>
                                         <option value="zh">中文 (Chinese)</option>
                                         <option value="ja">日本語 (Japanese)</option>
+                                    </select>
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <label className="text-sm font-medium">{t("settings.theme", "Theme")}</label>
+                                    <select
+                                        className="border rounded-md px-3 py-2 text-sm bg-transparent"
+                                        value={theme || "system"}
+                                        onChange={e => setTheme(e.target.value)}
+                                    >
+                                        <option value="system">{t("settings.themeSystem", "System")}</option>
+                                        <option value="light">{t("settings.themeLight", "Light")}</option>
+                                        <option value="dark">{t("settings.themeDark", "Dark")}</option>
                                     </select>
                                 </div>
 

@@ -13,15 +13,12 @@ import { Logo } from "@/components/logo"
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { MessageSquareIcon, DatabaseIcon, WrenchIcon, Settings2Icon, ListTodoIcon, ActivityIcon } from "lucide-react"
-
-import { ThemeToggle } from "@/components/theme-toggle"
 
 const getData = (t: TFunction) => ({
   user: {
@@ -110,9 +107,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
-      <SidebarFooter>
-        <ThemeToggle />
-      </SidebarFooter>
     </Sidebar>
   )
 }

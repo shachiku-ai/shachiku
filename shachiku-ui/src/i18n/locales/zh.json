@@ -179,5 +179,9 @@
     "errors.apiKeyRequired": "获取模型需要提供 API 密钥。",
     "errors.openaiError": "验证 OpenAI API 密钥失败: ",
     "errors.geminiError": "验证 Gemini API 密钥失败: ",
-    "errors.unsupportedProvider": "当前配置的提供商不受支持。"
+    "errors.unsupportedProvider": "当前配置的提供商不受支持。",
+    "settings.theme": "主题",
+    "settings.themeSystem": "跟随系统",
+    "settings.themeLight": "浅色",
+    "settings.themeDark": "深色"
 }
