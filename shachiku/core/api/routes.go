@@ -78,8 +78,6 @@ func SetupRoutes() *gin.Engine {
 	r := gin.Default()
 	_ = r.SetTrustedProxies(nil) // Disable proxy trust to get the true network IP
 
-	os.MkdirAll(filepath.Join(config.GetDataDir(), "uploads"), 0755)
-
 	// Enable CORS (basic example)
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
@@ -174,7 +172,6 @@ func SetupRoutes() *gin.Engine {
 	}
 
 	api := r.Group("/api")
-	api.Static("/uploads", filepath.Join(config.GetDataDir(), "uploads"))
 	{
 		api.GET("/ping", func(c *gin.Context) {
 			c.JSON(200, gin.H{"message": "pong"})
@@ -241,49 +238,9 @@ func handleChat(c *gin.Context) {
 		Message string `json:"message" form:"message"`
 	}
 
-	var filePaths []string
-	var imageMarkdown []string
-	uploadDir := filepath.Join(config.GetDataDir(), "uploads")
-	os.MkdirAll(uploadDir, 0755)
-
-	if strings.HasPrefix(c.ContentType(), "multipart/form-data") {
-		if err := c.Request.ParseMultipartForm(50 << 20); err == nil { // 50 MB limit
-			req.Message = c.PostForm("message")
-
-			form, _ := c.MultipartForm()
-			if form != nil {
-				files := form.File["files"]
-				for _, file := range files {
-					// Use a safe unique filename avoiding collisions
-					filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), filepath.Base(file.Filename))
-					dst := filepath.Join(uploadDir, filename)
-					if err := c.SaveUploadedFile(file, dst); err == nil {
-						filePaths = append(filePaths, dst)
-
-						ext := strings.ToLower(filepath.Ext(filename))
-						if ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".webp" {
-							scheme := "http"
-							if c.Request.TLS != nil {
-								scheme = "https"
-							}
-							baseURL := fmt.Sprintf("%s://%s/api/uploads", scheme, c.Request.Host)
-							imageMarkdown = append(imageMarkdown, fmt.Sprintf("![image](%s/%s)", baseURL, filename))
-						} else {
-							req.Message += fmt.Sprintf("\n[System: User uploaded file locally at: %s]", dst)
-						}
-					}
-				}
-			}
-		}
-	} else {
-		if err := c.BindJSON(&req); err != nil {
-			c.JSON(400, gin.H{"error": "Invalid request"})
-			return
-		}
-	}
-
-	if len(imageMarkdown) > 0 {
-		req.Message += "\n\n" + strings.Join(imageMarkdown, "\n")
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid request"})
+		return
 	}
 
 	log.Printf("[Chat] Received user message: %s", req.Message)

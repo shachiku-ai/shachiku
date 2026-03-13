@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
-import { SendIcon, BotIcon, UserIcon, Loader2Icon, ClockIcon, PaperclipIcon, XIcon, ChevronRightIcon, BrushCleaning } from "lucide-react"
+import { SendIcon, BotIcon, UserIcon, Loader2Icon, ChevronRightIcon, BrushCleaning } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -16,7 +16,7 @@ import { useChat } from "@/providers/chat-provider"
 export default function ChatPage() {
   const { t } = useTranslation()
   const {
-    messages, input, setInput, attachments, setAttachments,
+    messages, input, setInput,
     loading, fetching, abortController, setAbortController,
     handleSend: handleSendContext, executeClearShortMemory
   } = useChat()
@@ -38,14 +38,12 @@ export default function ChatPage() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
-    if ((!input.trim() && attachments.length === 0) || loading) return
+    if (!input.trim() || loading) return
 
-    const attachs = [...attachments];
     const msg = input.trim();
     setInput("")
-    setAttachments([]) // Clear locally for better UX
 
-    await handleSendContext(e, msg, attachs)
+    await handleSendContext(e, msg)
   }
 
   return (
@@ -194,50 +192,10 @@ export default function ChatPage() {
               </Button>
             </div>
           )}
-          {attachments.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-2">
-              {attachments.map((file, idx) => (
-                <div key={idx} className="relative group rounded-md overflow-hidden border bg-muted">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={URL.createObjectURL(file)} alt="attachment" className="h-16 w-16 object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
-                    className="absolute top-1 right-1 bg-background/80 hover:bg-destructive hover:text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <XIcon className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
           <form
             onSubmit={handleSend}
             className="flex w-full items-center space-x-2"
           >
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              className="hidden"
-              id="file-upload"
-              onChange={(e) => {
-                if (e.target.files) {
-                  setAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
-                }
-              }}
-              disabled={loading || fetching}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={() => document.getElementById("file-upload")?.click()}
-              disabled={loading || fetching}
-              title="Attach Images"
-            >
-              <PaperclipIcon className="h-4 w-4" />
-            </Button>
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -245,7 +203,7 @@ export default function ChatPage() {
               className="flex-1"
               disabled={loading || fetching}
             />
-            <Button type="submit" size="icon" disabled={(!input.trim() && attachments.length === 0) || loading || fetching}>
+            <Button type="submit" size="icon" disabled={!input.trim() || loading || fetching}>
               <SendIcon className="h-4 w-4" />
               <span className="sr-only">Send</span>
             </Button>

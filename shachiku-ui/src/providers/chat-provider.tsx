@@ -15,13 +15,11 @@ type ChatContextType = {
     setMessages: React.Dispatch<React.SetStateAction<Message[]>>
     input: string
     setInput: React.Dispatch<React.SetStateAction<string>>
-    attachments: File[]
-    setAttachments: React.Dispatch<React.SetStateAction<File[]>>
     loading: boolean
     fetching: boolean
     abortController: AbortController | null
     setAbortController: React.Dispatch<React.SetStateAction<AbortController | null>>
-    handleSend: (e: React.FormEvent, inputMsg: string, attachs: File[]) => Promise<void>
+    handleSend: (e: React.FormEvent, inputMsg: string) => Promise<void>
     executeClearShortMemory: () => Promise<void>
 }
 
@@ -31,7 +29,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const { t } = useTranslation()
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState("")
-    const [attachments, setAttachments] = useState<File[]>([])
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(true)
     const [abortController, setAbortController] = useState<AbortController | null>(null)
@@ -76,7 +73,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
     }
 
-    const handleSend = async (e: React.FormEvent, inputMsg: string, attachs: File[]) => {
+    const handleSend = async (e: React.FormEvent, inputMsg: string) => {
         e.preventDefault()
         if (!inputMsg.trim() || loading) return
 
@@ -87,20 +84,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setAbortController(controller)
 
         try {
-            let body;
-            const headers: Record<string, string> = {};
-
-            if (attachs.length > 0) {
-                const formData = new FormData();
-                formData.append("message", inputMsg);
-                attachs.forEach(file => {
-                    formData.append("files", file);
-                });
-                body = formData;
-            } else {
-                headers["Content-Type"] = "application/json";
-                body = JSON.stringify({ message: inputMsg });
-            }
+            const body = JSON.stringify({ message: inputMsg });
+            const headers: Record<string, string> = {
+                "Content-Type": "application/json"
+            };
 
             const res = await fetch(`${API_URL}/chat`, {
                 method: "POST",
@@ -178,7 +165,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         <ChatContext.Provider value={{
             messages, setMessages,
             input, setInput,
-            attachments, setAttachments,
             loading, fetching, abortController, setAbortController,
             handleSend, executeClearShortMemory
         }}>
