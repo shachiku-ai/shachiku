@@ -2,10 +2,8 @@ package provider
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"shachiku/core/memory"
@@ -28,28 +26,10 @@ func generateAnthropic(ctx context.Context, cfg models.LLMConfig, history []mode
 
 	messages := []anthropic.MessageParam{}
 	for _, msg := range history {
-		cleanText, imagePaths := extractImagesAndText(msg.Content)
 		var blocks []anthropic.ContentBlockParamUnion
-		if cleanText != "" {
-			blocks = append(blocks, anthropic.NewTextBlock(cleanText))
-		}
-		for _, imgPath := range imagePaths {
-			data, err := os.ReadFile(imgPath)
-			if err == nil {
-				encoded := base64.StdEncoding.EncodeToString(data)
-				mime := "image/jpeg"
-				if strings.HasSuffix(strings.ToLower(imgPath), ".png") {
-					mime = "image/png"
-				} else if strings.HasSuffix(strings.ToLower(imgPath), ".gif") {
-					mime = "image/gif"
-				} else if strings.HasSuffix(strings.ToLower(imgPath), ".webp") {
-					mime = "image/webp"
-				}
-				blocks = append(blocks, anthropic.NewImageBlockBase64(mime, encoded))
-			}
-		}
-		if len(blocks) == 0 {
-			// fallback if empty
+		if msg.Content != "" {
+			blocks = append(blocks, anthropic.NewTextBlock(msg.Content))
+		} else {
 			blocks = append(blocks, anthropic.NewTextBlock(" "))
 		}
 

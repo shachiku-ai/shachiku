@@ -22,9 +22,8 @@ func generateClaudeCode(ctx context.Context, cfg models.LLMConfig, history []mod
 		if msg.Role == "agent" {
 			role = "Assistant"
 		}
-		cleanText, _ := extractImagesAndText(msg.Content)
-		if cleanText != "" {
-			sb.WriteString(fmt.Sprintf("%s:\n%s\n\n", role, cleanText))
+		if msg.Content != "" {
+			sb.WriteString(fmt.Sprintf("%s:\n%s\n\n", role, msg.Content))
 		}
 	}
 
@@ -90,9 +89,8 @@ func generateGeminiCLI(ctx context.Context, cfg models.LLMConfig, history []mode
 		if msg.Role == "agent" {
 			role = "Assistant"
 		}
-		cleanText, _ := extractImagesAndText(msg.Content)
-		if cleanText != "" {
-			sb.WriteString(fmt.Sprintf("%s:\n%s\n\n", role, cleanText))
+		if msg.Content != "" {
+			sb.WriteString(fmt.Sprintf("%s:\n%s\n\n", role, msg.Content))
 		}
 	}
 
@@ -130,9 +128,8 @@ func generateCodexCLI(ctx context.Context, cfg models.LLMConfig, history []model
 		if msg.Role == "agent" {
 			role = "Assistant"
 		}
-		cleanText, _ := extractImagesAndText(msg.Content)
-		if cleanText != "" {
-			sb.WriteString(fmt.Sprintf("%s:\n%s\n\n", role, cleanText))
+		if msg.Content != "" {
+			sb.WriteString(fmt.Sprintf("%s:\n%s\n\n", role, msg.Content))
 		}
 	}
 

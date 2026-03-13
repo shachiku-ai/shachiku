@@ -2,10 +2,8 @@ package provider
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"shachiku/core/memory"
@@ -46,46 +44,10 @@ func generateOpenRouter(ctx context.Context, cfg models.LLMConfig, history []mod
 		if msg.Role == "agent" {
 			role = openai.ChatMessageRoleAssistant
 		}
-		cleanText, imagePaths := extractImagesAndText(msg.Content)
-		if len(imagePaths) > 0 {
-			var multi []openai.ChatMessagePart
-			if cleanText != "" {
-				multi = append(multi, openai.ChatMessagePart{
-					Type: openai.ChatMessagePartTypeText,
-					Text: cleanText,
-				})
-			}
-			for _, imgPath := range imagePaths {
-				data, err := os.ReadFile(imgPath)
-				if err == nil {
-					encoded := base64.StdEncoding.EncodeToString(data)
-					mime := "image/jpeg"
-					if strings.HasSuffix(strings.ToLower(imgPath), ".png") {
-						mime = "image/png"
-					} else if strings.HasSuffix(strings.ToLower(imgPath), ".gif") {
-						mime = "image/gif"
-					} else if strings.HasSuffix(strings.ToLower(imgPath), ".webp") {
-						mime = "image/webp"
-					}
-					url := fmt.Sprintf("data:%s;base64,%s", mime, encoded)
-					multi = append(multi, openai.ChatMessagePart{
-						Type: openai.ChatMessagePartTypeImageURL,
-						ImageURL: &openai.ChatMessageImageURL{
-							URL: url,
-						},
-					})
-				}
-			}
-			messages = append(messages, openai.ChatCompletionMessage{
-				Role:         role,
-				MultiContent: multi,
-			})
-		} else {
-			messages = append(messages, openai.ChatCompletionMessage{
-				Role:    role,
-				Content: msg.Content,
-			})
-		}
+		messages = append(messages, openai.ChatCompletionMessage{
+			Role:    role,
+			Content: msg.Content,
+		})
 	}
 
 	model := cfg.Model

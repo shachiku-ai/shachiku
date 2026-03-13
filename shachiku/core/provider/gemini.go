@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"shachiku/core/memory"
@@ -47,26 +46,10 @@ func generateGemini(ctx context.Context, cfg models.LLMConfig, history []models.
 			role = "model"
 		}
 
-		cleanText, imagePaths := extractImagesAndText(msg.Content)
 		var parts []genai.Part
-		if cleanText != "" {
-			parts = append(parts, genai.Text(cleanText))
-		}
-		for _, imgPath := range imagePaths {
-			data, err := os.ReadFile(imgPath)
-			if err == nil {
-				mime := "image/jpeg"
-				if strings.HasSuffix(strings.ToLower(imgPath), ".png") {
-					mime = "image/png"
-				} else if strings.HasSuffix(strings.ToLower(imgPath), ".gif") {
-					mime = "image/gif"
-				} else if strings.HasSuffix(strings.ToLower(imgPath), ".webp") {
-					mime = "image/webp"
-				}
-				parts = append(parts, genai.Blob{MIMEType: mime, Data: data})
-			}
-		}
-		if len(parts) == 0 {
+		if msg.Content != "" {
+			parts = append(parts, genai.Text(msg.Content))
+		} else {
 			parts = append(parts, genai.Text(" "))
 		}
 
@@ -81,26 +64,10 @@ func generateGemini(ctx context.Context, cfg models.LLMConfig, history []models.
 		lastMsg = history[len(history)-1].Content
 	}
 
-	cleanText, imagePaths := extractImagesAndText(lastMsg)
 	var lastParts []genai.Part
-	if cleanText != "" {
-		lastParts = append(lastParts, genai.Text(cleanText))
-	}
-	for _, imgPath := range imagePaths {
-		data, err := os.ReadFile(imgPath)
-		if err == nil {
-			mime := "image/jpeg"
-			if strings.HasSuffix(strings.ToLower(imgPath), ".png") {
-				mime = "image/png"
-			} else if strings.HasSuffix(strings.ToLower(imgPath), ".gif") {
-				mime = "image/gif"
-			} else if strings.HasSuffix(strings.ToLower(imgPath), ".webp") {
-				mime = "image/webp"
-			}
-			lastParts = append(lastParts, genai.Blob{MIMEType: mime, Data: data})
-		}
-	}
-	if len(lastParts) == 0 {
+	if lastMsg != "" {
+		lastParts = append(lastParts, genai.Text(lastMsg))
+	} else {
 		lastParts = append(lastParts, genai.Text(" "))
 	}
 
