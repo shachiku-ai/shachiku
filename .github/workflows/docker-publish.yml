@@ -6,14 +6,10 @@ on:
       - 'v*'
 
 jobs:
-  build-and-push-image:
-    runs-on: ubuntu-latest
+  build-artifacts:
+    runs-on: macos-latest
     permissions:
       contents: write
-      packages: write
-      attestations: write
-      id-token: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,13 +28,18 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: 'shachiku/go.mod'
+          
+      - name: Install macOS specific build dependencies
+        run: |
+          brew install create-dmg
 
       - name: Build artifacts
         run: |
           go install github.com/wailsapp/wails/v3/cmd/wails3@latest
           VERSION="${GITHUB_REF_NAME#v}"
           echo "Building version $VERSION..."
-          sed -i -E "s/version: .*/version: \"$VERSION\"/" shachiku-desktop/build/config.yml
+          # Use macOS compatible sed (BSD sed)
+          sed -i '' -E "s/version: .*/version: \"$VERSION\"/" shachiku-desktop/build/config.yml
           cd shachiku-desktop && wails3 task common:update:build-assets && cd ..
           make all TARGET_VERSION=$GITHUB_REF_NAME
 
@@ -54,6 +55,16 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-push-docker:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      attestations: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
