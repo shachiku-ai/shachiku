@@ -168,6 +168,7 @@ func performLocalSkill(name string, args string) string {
 	}
 
 	cmd := exec.Command("bash", executablePath, args)
+	configureCmd(cmd)
 	out, err := cmd.CombinedOutput()
 
 	output := string(out)
@@ -252,6 +253,7 @@ func performBashCommand(command string) string {
 	} else {
 		cmd = exec.Command("bash", "-c", command)
 	}
+	configureCmd(cmd)
 	out, err := cmd.CombinedOutput()
 
 	output := string(out)

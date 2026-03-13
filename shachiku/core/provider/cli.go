@@ -52,6 +52,8 @@ func generateClaudeCode(ctx context.Context, cfg models.LLMConfig, history []mod
 	cmd := exec.CommandContext(reqCtx, "npx", args...)
 	cmd.Stdin = strings.NewReader(sb.String())
 
+	configureCmd(cmd)
+
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
@@ -102,6 +104,8 @@ func generateGeminiCLI(ctx context.Context, cfg models.LLMConfig, history []mode
 	cmd := exec.CommandContext(reqCtx, "gemini", "-p", "")
 	cmd.Stdin = strings.NewReader(sb.String())
 
+	configureCmd(cmd)
+
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
@@ -146,6 +150,8 @@ func generateCodexCLI(ctx context.Context, cfg models.LLMConfig, history []model
 
 	cmd := exec.CommandContext(reqCtx, "codex", args...)
 	cmd.Stdin = strings.NewReader(sb.String())
+
+	configureCmd(cmd)
 
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
