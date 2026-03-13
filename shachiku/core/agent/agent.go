@@ -15,19 +15,218 @@ import (
 	"shachiku/core/skills"
 )
 
-// ProcessMessage runs the full multi-step LLM reasoning loop to handle a user message.
-func ProcessMessage(ctx context.Context, message string, onStep func(stepText string)) (string, error) {
-	cfg := memory.GetLLMConfig()
+// AgentAction represents a parsed JSON action from the LLM.
+type AgentAction struct {
+	Action      string          `json:"action"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Cron        string          `json:"cron"`
+	Args        json.RawMessage `json:"args"`
+	Command     string          `json:"command"`
+	Path        string          `json:"path"`
+	Force       bool            `json:"force"`
+}
+
+var (
+	reToolCall  = regexp.MustCompile(`(?is)<tool_(?:call|use)>(.*?)</tool_(?:call|use)>`)
+	tagReplacer = strings.NewReplacer(
+		"<tool_call>", "", "</tool_call>", "",
+		"<tool_use>", "", "</tool_use>", "",
+		"<tool_input>", "", "</tool_input>", "",
+	)
+)
+
+// fetchMemoryContext retrieves relevant past memories based on the user's message.
+func fetchMemoryContext(cfg models.LLMConfig, message string) []string {
 	emb, err := provider.GenerateEmbedding(cfg, message)
-	var memoryContext []string
 	if err == nil {
 		results, searchErr := memory.SearchMemory(emb, 3)
 		if searchErr == nil {
-			memoryContext = results
-		} else {
-			_ = searchErr
+			return results
 		}
 	}
+	return nil
+}
+
+// saveFactAsync extracts facts from the given message and saves them as vectors in the background.
+func saveFactAsync(cfg models.LLMConfig, message string) {
+	fact, err := provider.ExtractFacts(context.Background(), cfg, message)
+	if err == nil && fact != "" {
+		vec, err := provider.GenerateEmbedding(cfg, fact)
+		if err == nil {
+			memory.SaveFactToLongTermMemory(fact, vec)
+		}
+	}
+}
+
+// parseAgentReply separates the "thinking process" and the pure JSON action payload.
+func parseAgentReply(reply string) (thought string, jsonStr string, finalReply string) {
+	jsonStr = reply
+	finalReply = reply
+
+	// Extract thought process inside <think> tags.
+	if thinkStart := strings.Index(reply, "<think>"); thinkStart != -1 {
+		if thinkEnd := strings.Index(reply, "</think>"); thinkEnd != -1 && thinkEnd > thinkStart {
+			thought = strings.TrimSpace(reply[thinkStart+7 : thinkEnd])
+			reply = strings.TrimSpace(reply[:thinkStart] + "\n" + reply[thinkEnd+8:])
+			jsonStr = reply
+			finalReply = reply
+		}
+	}
+
+	// Unwrap tool call tags common in open-source models.
+	if matches := reToolCall.FindStringSubmatch(jsonStr); len(matches) > 1 {
+		jsonStr = matches[1]
+	}
+
+	// Clean up partial XML tags efficiently.
+	jsonStr = tagReplacer.Replace(jsonStr)
+
+	// Extract JSON block and further thinking text if any.
+	if startIdx := strings.Index(jsonStr, "{"); startIdx != -1 {
+		if thought == "" && startIdx > 0 {
+			thought = strings.TrimSpace(jsonStr[:startIdx])
+			if strings.HasPrefix(strings.ToLower(thought), "thinking process:") {
+				thought = strings.TrimSpace(thought[17:])
+			}
+			finalReply = strings.TrimSpace(jsonStr[startIdx:])
+		}
+		if endIdx := strings.LastIndex(jsonStr, "}"); endIdx != -1 && endIdx > startIdx {
+			jsonStr = jsonStr[startIdx : endIdx+1]
+		}
+	} else if thought == "" && strings.HasPrefix(strings.ToLower(jsonStr), "thinking process:") {
+		parts := strings.SplitN(jsonStr, "\n\n", 2)
+		if len(parts) == 2 {
+			thought = strings.TrimSpace(parts[0][17:])
+			jsonStr = parts[1]
+			finalReply = jsonStr
+		}
+	}
+
+	thought = strings.ReplaceAll(thought, "```json", "")
+	thought = strings.TrimSpace(thought)
+
+	return thought, jsonStr, finalReply
+}
+
+// formatSkillArgs processes edge cases in LLM outputs to generate a clean arguments string.
+func formatSkillArgs(actionName string, action *AgentAction) string {
+	var argsStr string
+	if len(action.Args) > 0 && string(action.Args) != "null" {
+		var s string
+		if err := json.Unmarshal(action.Args, &s); err == nil {
+			argsStr = s
+		} else {
+			argsStr = string(action.Args)
+		}
+	}
+
+	if argsStr == "" || argsStr == `""` {
+		if action.Command != "" {
+			argsStr = action.Command
+		} else if action.Path != "" {
+			if actionName == "install_skill" {
+				argsStr = fmt.Sprintf(`{"path":"%s", "force":%t}`, action.Path, action.Force)
+			} else {
+				argsStr = action.Path
+			}
+		}
+	}
+
+	if actionName == "install_skill" && action.Path == "" && !strings.HasPrefix(strings.TrimSpace(argsStr), "{") {
+		argsStr = fmt.Sprintf(`{"path":"%s", "force":%v}`, argsStr, false)
+	}
+
+	return argsStr
+}
+
+// executeAgentAction executes the corresponding tool/task business logic.
+func executeAgentAction(ctx context.Context, cfg models.LLMConfig, action *AgentAction, ctxHistory []models.Message, onStep func(stepText string)) string {
+	actionName := action.Action
+	if actionName == "execute_skill" {
+		actionName = action.Name
+	}
+
+	if onStep != nil {
+		onStep(fmt.Sprintf("Executing: %s...", actionName))
+	}
+
+	switch actionName {
+	case "create_skill":
+		if onStep != nil {
+			onStep(fmt.Sprintf("Brainstorming skill '%s' structure and logic...", action.Name))
+		}
+		instructions, _ := provider.GenerateSkillInstructions(ctx, cfg, action.Name, action.Description)
+		if err := skills.CreateSkill(action.Name, action.Description, instructions); err == nil {
+			return fmt.Sprintf("Skill '%s' created successfully.", action.Name)
+		} else {
+			return fmt.Sprintf("Failed to create skill '%s': %v", action.Name, err)
+		}
+
+	case "execute_task":
+		if onStep != nil {
+			onStep(fmt.Sprintf("Summarizing task context for '%s'...", action.Name))
+		}
+		var recentMessages string
+		for _, hm := range ctxHistory {
+			if hm.Role == "user" || (hm.Role == "agent" && !strings.HasPrefix(hm.Content, "{")) {
+				recentMessages += hm.Role + ": " + hm.Content + "\n"
+			}
+		}
+		if len(recentMessages) > 3000 {
+			recentMessages = recentMessages[len(recentMessages)-3000:]
+		}
+
+		taskMemoryContext := fetchMemoryContext(cfg, action.Description)
+		taskPrompt, summarizeErr := provider.SummarizeTaskContext(ctx, cfg, action.Name, action.Description, recentMessages, taskMemoryContext)
+		if summarizeErr != nil || taskPrompt == "" {
+			taskPrompt = "Task Name: " + action.Name + "\nDescription/Context: " + action.Description
+		}
+
+		task, dbErr := memory.CreateTask(action.Name, action.Cron, taskPrompt)
+		if dbErr != nil {
+			return fmt.Sprintf("Failed to execute task '%s': %v", action.Name, dbErr)
+		}
+
+		if action.Cron != "" {
+			scheduler.ScheduleTask(*task)
+			return fmt.Sprintf("Recurring task '%s' scheduled with cron '%s'.", action.Name, action.Cron)
+		}
+		scheduler.RunTaskOnce(*task)
+		return fmt.Sprintf("Task '%s' is now executing in the background.", action.Name)
+
+	case "list_tasks":
+		tasks := memory.GetTasks()
+		if len(tasks) == 0 {
+			return "There are currently no scheduled or background tasks running."
+		}
+		var result strings.Builder
+		result.WriteString("Here are the current tasks:\n")
+		for _, t := range tasks {
+			result.WriteString(fmt.Sprintf("- ID: %d | Name: %s | Cron: %s | Status: %s\n", t.ID, t.Name, t.Cron, t.Status))
+		}
+		return result.String()
+
+	case "delete_task":
+		tasks, err := memory.DeleteTasksByName(action.Name)
+		if err != nil {
+			return fmt.Sprintf("Failed to delete task '%s': %v", action.Name, err)
+		}
+		for _, t := range tasks {
+			scheduler.UnscheduleTask(t.ID)
+		}
+		return fmt.Sprintf("Successfully deleted and stopped %d task(s) named '%s'.", len(tasks), action.Name)
+
+	default:
+		argsStr := formatSkillArgs(actionName, action)
+		return skills.ExecuteSkill(actionName, argsStr)
+	}
+}
+
+// ProcessMessage runs the automated multi-step LLM reasoning loop.
+func ProcessMessage(ctx context.Context, message string, onStep func(stepText string)) (string, error) {
+	cfg := memory.GetLLMConfig()
+	memoryContext := fetchMemoryContext(cfg, message)
 
 	memory.AddMessage("user", message)
 	ctxHistory := memory.GetRecentHistory()
@@ -36,6 +235,7 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 	if maxIterations <= 0 {
 		maxIterations = 50
 	}
+
 	var finalReply string
 	availableSkills := skills.ListSkills()
 
@@ -52,198 +252,30 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 		}
 
 		log.Printf("[Agent] Raw Response (Iter %d):\n%s\n", i+1, reply)
-		finalReply = reply
 
-		var agentAction struct {
-			Action      string          `json:"action"`
-			Name        string          `json:"name"`
-			Description string          `json:"description"`
-			Cron        string          `json:"cron"`
-			Args        json.RawMessage `json:"args"`
-			Command     string          `json:"command"`
-			Path        string          `json:"path"`
-			Force       bool            `json:"force"`
+		thought, jsonStr, parsedReply := parseAgentReply(reply)
+		finalReply = parsedReply
+
+		if thought != "" && onStep != nil {
+			onStep(fmt.Sprintf("Thinking: %s", thought))
 		}
 
-		jsonStr := reply
-		var thought string
+		var agentAction AgentAction
+		jsonErr := json.Unmarshal([]byte(jsonStr), &agentAction)
 
-		if thinkStart := strings.Index(reply, "<think>"); thinkStart != -1 {
-			if thinkEnd := strings.Index(reply, "</think>"); thinkEnd != -1 && thinkEnd > thinkStart {
-				thought = strings.TrimSpace(reply[thinkStart+7 : thinkEnd])
-				reply = strings.TrimSpace(reply[:thinkStart] + "\n" + reply[thinkEnd+8:])
-				jsonStr = reply
-				finalReply = reply
-			}
-		}
-
-		// Handle potential XML tool call wrapping from open-source/OpenRouter models
-		reToolCall := regexp.MustCompile(`(?is)<tool_(?:call|use)>(.*?)</tool_(?:call|use)>`)
-		if matches := reToolCall.FindStringSubmatch(jsonStr); len(matches) > 1 {
-			jsonStr = matches[1]
-		}
-
-		// Clean up loose XML tags from jsonStr to prevent them from becoming the 'thought'
-		jsonStr = strings.ReplaceAll(jsonStr, "<tool_call>", "")
-		jsonStr = strings.ReplaceAll(jsonStr, "</tool_call>", "")
-		jsonStr = strings.ReplaceAll(jsonStr, "<tool_use>", "")
-		jsonStr = strings.ReplaceAll(jsonStr, "</tool_use>", "")
-		jsonStr = strings.ReplaceAll(jsonStr, "<tool_input>", "")
-		jsonStr = strings.ReplaceAll(jsonStr, "</tool_input>", "")
-
-		if startIdx := strings.Index(jsonStr, "{"); startIdx != -1 {
-			if thought == "" && startIdx > 0 {
-				thought = strings.TrimSpace(jsonStr[:startIdx])
-				if strings.HasPrefix(strings.ToLower(thought), "thinking process:") {
-					thought = strings.TrimSpace(thought[17:])
-				}
-				finalReply = strings.TrimSpace(jsonStr[startIdx:])
-			}
-			if endIdx := strings.LastIndex(jsonStr, "}"); endIdx != -1 && endIdx > startIdx {
-				jsonStr = jsonStr[startIdx : endIdx+1]
-			}
-		} else if thought == "" && strings.HasPrefix(strings.ToLower(jsonStr), "thinking process:") {
-			parts := strings.SplitN(jsonStr, "\n\n", 2)
-			if len(parts) == 2 {
-				thought = strings.TrimSpace(parts[0][17:])
-				jsonStr = parts[1]
-				finalReply = jsonStr
-			}
-		}
-
-		if thought != "" {
-			thought = strings.ReplaceAll(thought, "```json", "")
-			thought = strings.TrimSpace(thought)
-			if thought != "" && onStep != nil {
-				onStep(fmt.Sprintf("Thinking: %s", thought))
-			}
-		}
-
-		if jsonErr := json.Unmarshal([]byte(jsonStr), &agentAction); jsonErr == nil && agentAction.Action != "" {
-			var executionResult string
-			actionName := agentAction.Action
-
-			if actionName == "execute_skill" {
-				actionName = agentAction.Name
-			}
-
-			if onStep != nil {
-				onStep(fmt.Sprintf("Executing: %s...", actionName))
-			}
-
-			switch actionName {
-			case "create_skill":
-				if onStep != nil {
-					onStep(fmt.Sprintf("Brainstorming skill '%s' structure and logic...", agentAction.Name))
-				}
-				instructions, _ := provider.GenerateSkillInstructions(ctx, cfg, agentAction.Name, agentAction.Description)
-				err := skills.CreateSkill(agentAction.Name, agentAction.Description, instructions)
-				if err == nil {
-					executionResult = fmt.Sprintf("Skill '%s' created successfully.", agentAction.Name)
-				} else {
-					executionResult = fmt.Sprintf("Failed to create skill '%s': %v", agentAction.Name, err)
-				}
-			case "execute_task":
-				if onStep != nil {
-					onStep(fmt.Sprintf("Summarizing task context for '%s'...", agentAction.Name))
-				}
-				var recentMessages string
-				for _, hm := range ctxHistory {
-					if hm.Role == "user" || (hm.Role == "agent" && !strings.HasPrefix(hm.Content, "{")) {
-						recentMessages += hm.Role + ": " + hm.Content + "\n"
-					}
-				}
-				if len(recentMessages) > 3000 {
-					recentMessages = recentMessages[len(recentMessages)-3000:]
-				}
-
-				var taskMemoryContext []string
-				taskEmb, taskEmbErr := provider.GenerateEmbedding(cfg, agentAction.Description)
-				if taskEmbErr == nil {
-					taskResults, taskSearchErr := memory.SearchMemory(taskEmb, 3)
-					if taskSearchErr == nil {
-						taskMemoryContext = taskResults
-					}
-				}
-
-				taskPrompt, summarizeErr := provider.SummarizeTaskContext(ctx, cfg, agentAction.Name, agentAction.Description, recentMessages, taskMemoryContext)
-				if summarizeErr != nil || taskPrompt == "" {
-					taskPrompt = "Task Name: " + agentAction.Name + "\nDescription/Context: " + agentAction.Description
-				}
-
-				task, dbErr := memory.CreateTask(agentAction.Name, agentAction.Cron, taskPrompt)
-				if dbErr == nil {
-					if agentAction.Cron != "" {
-						scheduler.ScheduleTask(*task)
-						executionResult = fmt.Sprintf("Recurring task '%s' scheduled with cron '%s'.", agentAction.Name, agentAction.Cron)
-					} else {
-						scheduler.RunTaskOnce(*task)
-						executionResult = fmt.Sprintf("Task '%s' is now executing in the background.", agentAction.Name)
-					}
-				} else {
-					executionResult = fmt.Sprintf("Failed to execute task '%s': %v", agentAction.Name, dbErr)
-				}
-			case "list_tasks":
-				tasks := memory.GetTasks()
-				if len(tasks) == 0 {
-					executionResult = "There are currently no scheduled or background tasks running."
-				} else {
-					executionResult = "Here are the current tasks:\n"
-					for _, t := range tasks {
-						executionResult += fmt.Sprintf("- ID: %d | Name: %s | Cron: %s | Status: %s\n", t.ID, t.Name, t.Cron, t.Status)
-					}
-				}
-			case "delete_task":
-				tasks, err := memory.DeleteTasksByName(agentAction.Name)
-				if err != nil {
-					executionResult = fmt.Sprintf("Failed to delete task '%s': %v", agentAction.Name, err)
-				} else {
-					for _, t := range tasks {
-						scheduler.UnscheduleTask(t.ID)
-					}
-					executionResult = fmt.Sprintf("Successfully deleted and stopped %d task(s) named '%s'.", len(tasks), agentAction.Name)
-				}
-			default:
-				var argsStr string
-				if len(agentAction.Args) > 0 && string(agentAction.Args) != "null" {
-					var s string
-					if err := json.Unmarshal(agentAction.Args, &s); err == nil {
-						argsStr = s
-					} else {
-						argsStr = string(agentAction.Args)
-					}
-				}
-
-				if argsStr == "" || argsStr == `""` {
-					if agentAction.Command != "" {
-						argsStr = agentAction.Command
-					} else if agentAction.Path != "" {
-						if actionName == "install_skill" {
-							argsStr = fmt.Sprintf(`{"path":"%s", "force":%t}`, agentAction.Path, agentAction.Force)
-						} else {
-							argsStr = agentAction.Path
-						}
-					}
-				}
-
-				if actionName == "install_skill" && agentAction.Path == "" && !strings.HasPrefix(strings.TrimSpace(argsStr), "{") {
-					argsStr = fmt.Sprintf(`{"path":"%s", "force":%v}`, argsStr, false)
-				}
-
-				skillResult := skills.ExecuteSkill(actionName, argsStr)
-				executionResult = skillResult
-			}
+		if jsonErr == nil && agentAction.Action != "" {
+			executionResult := executeAgentAction(ctx, cfg, &agentAction, ctxHistory, onStep)
 
 			ctxHistory = append(ctxHistory, models.Message{Role: "agent", Content: reply})
 
-			systemPromptPrompt := fmt.Sprintf("You just executed the action/skill '%s'.\nThe result was:\n--------\n%s\n--------\nAnalyze the result. If you need to perform MORE actions to accomplish the user's goal, output the NEXT JSON action. If the task is fully complete, provide the final response to the user in a natural, conversational way without outputting any JSON. IMPORTANT: The final response MUST explicitly contain the exact details, prices, or data found in the result. DO NOT just summarize; provide the actual data. Do NOT include any 'Thought process:' or internal thinking in your final response—just directly address the user. Ensure your final response tone, language, and personality strictly match any preferences or personality traits found in your long-term memory context.", actionName, executionResult)
-			ctxHistory = append(ctxHistory, models.Message{Role: "user", Content: systemPromptPrompt})
-
+			systemPrompt := fmt.Sprintf("You just executed the action/skill '%s'.\nThe result was:\n--------\n%s\n--------\nAnalyze the result. If you need to perform MORE actions to accomplish the user's goal, output the NEXT JSON action. If the task is fully complete, provide the final response to the user in a natural, conversational way without outputting any JSON. IMPORTANT: The final response MUST explicitly contain the exact details, prices, or data found in the result. DO NOT just summarize; provide the actual data. Do NOT include any 'Thought process:' or internal thinking in your final response—just directly address the user. Ensure your final response tone, language, and personality strictly match any preferences or personality traits found in your long-term memory context.", agentAction.Action, executionResult)
+			ctxHistory = append(ctxHistory, models.Message{Role: "user", Content: systemPrompt})
 		} else if strings.HasPrefix(strings.TrimSpace(jsonStr), "{") && strings.HasSuffix(strings.TrimSpace(jsonStr), "}") {
 			ctxHistory = append(ctxHistory, models.Message{Role: "agent", Content: reply})
 			ctxHistory = append(ctxHistory, models.Message{Role: "user", Content: fmt.Sprintf("System: Your JSON failed to parse. Error: %v. Please make sure to output valid JSON. Do not write raw objects inside strings without escaping, and ensure the JSON is fully closed.", jsonErr)})
 			continue
 		} else {
+			// Model exited the loop intentionally or didn't output JSON.
 			break
 		}
 
@@ -258,15 +290,7 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 		}
 	}
 
-	go func(msg string, lcfg models.LLMConfig) {
-		fact, err := provider.ExtractFacts(context.Background(), lcfg, msg)
-		if err == nil && fact != "" {
-			vec, err := provider.GenerateEmbedding(lcfg, fact)
-			if err == nil {
-				memory.SaveFactToLongTermMemory(fact, vec)
-			}
-		}
-	}(message, cfg)
+	go saveFactAsync(cfg, message)
 
 	memory.AddMessage("agent", finalReply)
 	return finalReply, nil
