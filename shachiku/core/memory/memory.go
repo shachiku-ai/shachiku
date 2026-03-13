@@ -315,9 +315,24 @@ func GetTokenDashboardMetrics() (TokenDashboardMetrics, error) {
 		return metrics, fmt.Errorf("local sqlDB not initialized")
 	}
 
-	// Calculate 30 days ago
-	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
+	// Initialize 30 days of data with zeros
+	now := time.Now()
+	var allDays []DailyTokenUsage
+	dayMap := make(map[string]int)
 
+	for i := 29; i >= 0; i-- {
+		dayStr := now.AddDate(0, 0, -i).Format("2006-01-02")
+		allDays = append(allDays, DailyTokenUsage{
+			Date:         dayStr,
+			InputTokens:  0,
+			OutputTokens: 0,
+		})
+		dayMap[dayStr] = len(allDays) - 1
+	}
+
+	thirtyDaysAgo := now.AddDate(0, 0, -30)
+
+	var dbResults []DailyTokenUsage
 	// Daily usage for the last 30 days
 	// SQLite syntax for grouping by date: strftime('%Y-%m-%d', created_at)
 	err := sqlDB.Model(&models.TokenLog{}).
@@ -325,11 +340,20 @@ func GetTokenDashboardMetrics() (TokenDashboardMetrics, error) {
 		Where("created_at >= ?", thirtyDaysAgo).
 		Group("strftime('%Y-%m-%d', created_at)").
 		Order("date ASC").
-		Scan(&metrics.DailyUsage).Error
+		Scan(&dbResults).Error
 
 	if err != nil {
 		return metrics, fmt.Errorf("failed to fetch daily token usage: %v", err)
 	}
+
+	for _, result := range dbResults {
+		if idx, ok := dayMap[result.Date]; ok {
+			allDays[idx].InputTokens = result.InputTokens
+			allDays[idx].OutputTokens = result.OutputTokens
+		}
+	}
+
+	metrics.DailyUsage = allDays
 
 	// Task usage for all time
 	err = sqlDB.Table("token_logs").
