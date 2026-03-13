@@ -90,20 +90,24 @@ func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 	username := msg.From.UserName
 
 	cfg := memory.GetLLMConfig()
-	if cfg.AllowedTelegramUsers != "" {
-		allowed := false
-		users := strings.Split(cfg.AllowedTelegramUsers, ",")
-		for _, u := range users {
-			if strings.TrimSpace(u) == username {
-				allowed = true
-				break
-			}
+	if cfg.AllowedTelegramUsers == "" {
+		log.Printf("[Telegram] Rejecting message because no allowed users are configured.")
+		bot.Send(tgbotapi.NewMessage(chatID, "⛔ Unauthorized user. No allowed users are configured."))
+		return
+	}
+
+	allowed := false
+	users := strings.Split(cfg.AllowedTelegramUsers, ",")
+	for _, u := range users {
+		if strings.TrimSpace(u) == username {
+			allowed = true
+			break
 		}
-		if !allowed {
-			log.Printf("[Telegram] Rejecting message from unauthorized user: %s", username)
-			bot.Send(tgbotapi.NewMessage(chatID, "⛔ Unauthorized user. You are not allowed to interact with this agent."))
-			return
-		}
+	}
+	if !allowed {
+		log.Printf("[Telegram] Rejecting message from unauthorized user: %s", username)
+		bot.Send(tgbotapi.NewMessage(chatID, "⛔ Unauthorized user. You are not allowed to interact with this agent."))
+		return
 	}
 
 	// Update AdminChatID to the most recent user
