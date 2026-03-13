@@ -37,11 +37,18 @@ jobs:
         run: |
           go install github.com/wailsapp/wails/v3/cmd/wails3@latest
           VERSION="${GITHUB_REF_NAME#v}"
+          
+          # Validate version format to prevent command injection and ensure consistency
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
+            echo "Invalid version format: $VERSION. Expected format: x.y.z(-suffix)"
+            exit 1
+          fi
+
           echo "Building version $VERSION..."
           # Use macOS compatible sed (BSD sed)
-          sed -i '' -E "s/version: .*/version: \"$VERSION\"/" shachiku-desktop/build/config.yml
+          sed -i '' -E "s|version: .*|version: \"$VERSION\"|" shachiku-desktop/build/config.yml
           cd shachiku-desktop && wails3 task common:update:build-assets && cd ..
-          make all TARGET_VERSION=$GITHUB_REF_NAME
+          make all TARGET_VERSION="$GITHUB_REF_NAME"
 
       - name: Release to GitHub
         uses: softprops/action-gh-release@v2
