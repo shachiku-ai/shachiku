@@ -74,7 +74,7 @@ build-darwin-desktop:
 	@echo "========================================"
 	@echo "4. Creating DMG image..."
 	@echo "========================================"
-	rm -f dist/shachiku-macos.dmg
+	rm -f dist/shachiku-desktop-macos-arm64.dmg
 	create-dmg \
 		--volname "Shachiku" \
 		--window-pos 200 120 \
@@ -83,7 +83,7 @@ build-darwin-desktop:
 		--icon "Shachiku.app" 150 190 \
 		--hide-extension "Shachiku.app" \
 		--app-drop-link 450 190 \
-		"dist/shachiku-macos.dmg" \
+		"dist/shachiku-desktop-macos-arm64.dmg" \
 		"dist/Shachiku.app"
 	@echo "========================================"
 	@echo "✨ Desktop builds complete!"
@@ -97,10 +97,10 @@ build-windows-desktop:
 	@echo "========================================"
 	mkdir -p dist
 	cd shachiku-desktop && wails3 task windows:build ARCH=amd64 LDFLAGS=$(LDFLAGS)
-	cp -a shachiku-desktop/bin/shachiku-desktop.exe dist/shachiku-windows.exe
+	cp -a shachiku-desktop/bin/shachiku-desktop.exe dist/shachiku-desktop-windows-amd64.exe
 	@echo "========================================"
 	@echo "✨ Windows Desktop build complete!"
-	@echo "🎯 Executable path: dist/shachiku-windows.exe"
+	@echo "🎯 Executable path: dist/shachiku-desktop-windows-amd64.exe"
 	@echo "========================================"
 
 # Clean build artifacts
