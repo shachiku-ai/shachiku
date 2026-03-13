@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/sidebar"
 import { MessageSquareIcon, DatabaseIcon, WrenchIcon, Settings2Icon, ListTodoIcon, ActivityIcon } from "lucide-react"
 
+import { ThemeToggle } from "@/components/theme-toggle"
+
 const getData = (t: TFunction) => ({
   user: {
     name: "Agent Admin",
@@ -109,6 +111,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
+        <ThemeToggle />
       </SidebarFooter>
     </Sidebar>
   )
