@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"shachiku/core/memory"
@@ -75,6 +76,20 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 				finalReply = reply
 			}
 		}
+
+		// Handle potential XML tool call wrapping from open-source/OpenRouter models
+		reToolCall := regexp.MustCompile(`(?is)<tool_(?:call|use)>(.*?)</tool_(?:call|use)>`)
+		if matches := reToolCall.FindStringSubmatch(jsonStr); len(matches) > 1 {
+			jsonStr = matches[1]
+		}
+
+		// Clean up loose XML tags from jsonStr to prevent them from becoming the 'thought'
+		jsonStr = strings.ReplaceAll(jsonStr, "<tool_call>", "")
+		jsonStr = strings.ReplaceAll(jsonStr, "</tool_call>", "")
+		jsonStr = strings.ReplaceAll(jsonStr, "<tool_use>", "")
+		jsonStr = strings.ReplaceAll(jsonStr, "</tool_use>", "")
+		jsonStr = strings.ReplaceAll(jsonStr, "<tool_input>", "")
+		jsonStr = strings.ReplaceAll(jsonStr, "</tool_input>", "")
 
 		if startIdx := strings.Index(jsonStr, "{"); startIdx != -1 {
 			if thought == "" && startIdx > 0 {
