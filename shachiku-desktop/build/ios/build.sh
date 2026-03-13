@@ -2,10 +2,10 @@
 set -e
 
 # Build configuration
-APP_NAME="dummy"
-BUNDLE_ID="com.example.dummy"
-VERSION="0.1.0"
-BUILD_NUMBER="0.1.0"
+APP_NAME="shachiku-desktop"
+BUNDLE_ID="com.shachiku.desktop"
+VERSION="1.0.0"
+BUILD_NUMBER="1.0.0"
 BUILD_DIR="build/ios"
 TARGET="simulator"
 

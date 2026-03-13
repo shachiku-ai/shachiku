@@ -61,12 +61,15 @@ build-windows-amd64: build-ui
 # Desktop client build using Wails v3
 build-desktop: build-ui
 	@echo "========================================"
-	@echo "3. Compiling shachiku-desktop..."
+	@echo "3. Compiling shachiku-desktop (Darwin arm64)..."
 	@echo "========================================"
-	cd shachiku-desktop && wails3 build
+	mkdir -p dist
+	cd shachiku-desktop && wails3 task darwin:package ARCH=arm64
+	rm -rf dist/shachiku-desktop-darwin-arm64.app
+	cp -a shachiku-desktop/bin/shachiku-desktop.app dist/shachiku-desktop-darwin-arm64.app
 	@echo "========================================"
-	@echo "✨ Desktop build complete!"
-	@echo "🎯 Executable path: shachiku-desktop/bin/"
+	@echo "✨ Desktop builds complete!"
+	@echo "🎯 Executable path: dist/"
 	@echo "========================================"
 
 # Clean build artifacts

@@ -1,13 +1,13 @@
 [Desktop Entry]
 Version=1.0
-Name=My Product
-Comment=A dummy application
+Name=Shachiku Desktop
+Comment=Your modern AI assistant
 # The Exec line includes %u to pass the URL to the application
-Exec=/usr/local/bin/dummy %u
+Exec=/usr/local/bin/shachiku-desktop %u
 Terminal=false
 Type=Application
-Icon=dummy
+Icon=shachiku-desktop
 Categories=Utility;
-StartupWMClass=dummy
+StartupWMClass=shachiku-desktop
 
  

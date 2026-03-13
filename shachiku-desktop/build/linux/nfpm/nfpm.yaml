@@ -3,26 +3,26 @@
 #
 # The lines below are called `modelines`. See `:help modeline`
 
-name: "dummy"
+name: "shachiku-desktop"
 arch: ${GOARCH}
 platform: "linux"
-version: "0.1.0"
+version: "1.0.0"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
-description: "A dummy application"
-vendor: "My Company"
+description: "Your modern AI assistant"
+vendor: "Shachiku"
 homepage: "https://wails.io"
 license: "MIT"
 release: "1"
 
 contents:
-  - src: "./bin/dummy"
-    dst: "/usr/local/bin/dummy"
+  - src: "./bin/shachiku-desktop"
+    dst: "/usr/local/bin/shachiku-desktop"
   - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/dummy.png"
-  - src: "./build/linux/dummy.desktop"
-    dst: "/usr/share/applications/dummy.desktop"
+    dst: "/usr/share/icons/hicolor/128x128/apps/shachiku-desktop.png"
+  - src: "./build/linux/shachiku-desktop.desktop"
+    dst: "/usr/share/applications/shachiku-desktop.desktop"
 
 # Default dependencies for Debian 12/Ubuntu 22.04+ with WebKit 4.1
 depends:
