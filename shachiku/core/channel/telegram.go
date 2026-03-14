@@ -135,11 +135,11 @@ func (m *TelegramModule) handleMessage(msg *tgbotapi.Message) {
 	log.Printf("[Telegram] Received message from %s: %s", msg.From.UserName, text)
 
 	// Send an initial "thinking" message
-	thinkMsg, err := m.bot.Send(tgbotapi.NewMessage(chatID, "⏳ _Thinking..._"))
+	thinkMsg, err := m.bot.Send(tgbotapi.NewMessage(chatID, "⏳ <i>Thinking...</i>"))
 	if err == nil {
 		// Set parsemode for edit
-		editMsg := tgbotapi.NewEditMessageText(chatID, thinkMsg.MessageID, "⏳ _Thinking..._")
-		editMsg.ParseMode = "Markdown"
+		editMsg := tgbotapi.NewEditMessageText(chatID, thinkMsg.MessageID, "⏳ <i>Thinking...</i>")
+		editMsg.ParseMode = tgbotapi.ModeHTML
 		m.bot.Send(editMsg)
 	}
 
@@ -149,8 +149,8 @@ func (m *TelegramModule) handleMessage(msg *tgbotapi.Message) {
 	finalReply, agentErr := agent.ProcessMessage(ctx, text, func(step string) {
 		// Throttle updates to Telegram to avoid hitting rate limits
 		if err == nil && time.Since(lastStepTime) > 3*time.Second && step != "" {
-			edit := tgbotapi.NewEditMessageText(chatID, thinkMsg.MessageID, "⏳ _"+step+"_")
-			edit.ParseMode = "Markdown"
+			edit := tgbotapi.NewEditMessageText(chatID, thinkMsg.MessageID, "⏳ <i>"+MarkdownToTelegramHTML(step)+"</i>")
+			edit.ParseMode = tgbotapi.ModeHTML
 			m.bot.Send(edit)
 			lastStepTime = time.Now()
 		}
@@ -170,8 +170,8 @@ func (m *TelegramModule) handleMessage(msg *tgbotapi.Message) {
 		m.bot.Request(tgbotapi.NewDeleteMessage(chatID, thinkMsg.MessageID))
 	}
 
-	replyMsg := tgbotapi.NewMessage(chatID, finalReply)
-	replyMsg.ParseMode = "Markdown"
+	replyMsg := tgbotapi.NewMessage(chatID, MarkdownToTelegramHTML(finalReply))
+	replyMsg.ParseMode = tgbotapi.ModeHTML
 	_, sendErr := m.bot.Send(replyMsg)
 
 	if sendErr != nil {
@@ -182,8 +182,8 @@ func (m *TelegramModule) handleMessage(msg *tgbotapi.Message) {
 
 func (m *TelegramModule) SendNotification(msg string) error {
 	if m.bot != nil && m.adminChat != 0 {
-		replyMsg := tgbotapi.NewMessage(m.adminChat, msg)
-		replyMsg.ParseMode = "Markdown"
+		replyMsg := tgbotapi.NewMessage(m.adminChat, MarkdownToTelegramHTML(msg))
+		replyMsg.ParseMode = tgbotapi.ModeHTML
 		if _, err := m.bot.Send(replyMsg); err != nil {
 			replyMsg.ParseMode = ""
 			_, err = m.bot.Send(replyMsg)
