@@ -78,6 +78,10 @@ func generateOpenAI(ctx context.Context, cfg models.LLMConfig, history []models.
 		return "", fmt.Errorf("openai error: %v", err)
 	}
 
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("openai error: successfully connected but no choices returned in the response (possibly blocked or filtered)")
+	}
+
 	promptTokens := resp.Usage.PromptTokens
 	completionTokens := resp.Usage.CompletionTokens
 	if promptTokens == 0 && completionTokens == 0 {

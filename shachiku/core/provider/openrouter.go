@@ -70,6 +70,10 @@ func generateOpenRouter(ctx context.Context, cfg models.LLMConfig, history []mod
 		return "", fmt.Errorf("openrouter error: %v", err)
 	}
 
+	if len(resp.Choices) == 0 {
+		return "", fmt.Errorf("openrouter error: successfully connected but no choices returned in the response (possibly blocked or filtered)")
+	}
+
 	promptTokens := resp.Usage.PromptTokens
 	completionTokens := resp.Usage.CompletionTokens
 	if promptTokens == 0 && completionTokens == 0 {
