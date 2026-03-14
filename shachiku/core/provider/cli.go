@@ -19,13 +19,21 @@ import (
 func generateClaudeCode(ctx context.Context, cfg models.LLMConfig, history []models.Message, systemPrompt string, taskID uint) (string, error) {
 	var sb strings.Builder
 
+	fileRegex := regexp.MustCompile(`(?m)^@(/.*)$`)
+
 	for _, msg := range history {
 		role := "User"
 		if msg.Role == "agent" {
 			role = "Assistant"
 		}
 		if msg.Content != "" {
-			sb.WriteString(fmt.Sprintf("%s:\n%s\n\n", role, msg.Content))
+			content := msg.Content
+			matches := fileRegex.FindAllStringSubmatch(content, -1)
+			for _, m := range matches {
+				path := strings.TrimSpace(m[1])
+				content = strings.ReplaceAll(content, m[0], "[Attached File: "+path+"]")
+			}
+			sb.WriteString(fmt.Sprintf("%s:\n%s\n\n", role, content))
 		}
 	}
 
@@ -144,6 +152,10 @@ func generateGeminiCLI(ctx context.Context, cfg models.LLMConfig, history []mode
 
 func generateCodexCLI(ctx context.Context, cfg models.LLMConfig, history []models.Message, systemPrompt string, taskID uint) (string, error) {
 	var sb strings.Builder
+	var imageArgs []string
+	var dirs []string
+	dirMap := make(map[string]bool)
+	fileRegex := regexp.MustCompile(`(?m)^@(/.*)$`)
 
 	// systemPrompt is passed via -c command line argument below
 
@@ -153,7 +165,22 @@ func generateCodexCLI(ctx context.Context, cfg models.LLMConfig, history []model
 			role = "Assistant"
 		}
 		if msg.Content != "" {
-			sb.WriteString(fmt.Sprintf("%s:\n%s\n\n", role, msg.Content))
+			content := msg.Content
+			matches := fileRegex.FindAllStringSubmatch(content, -1)
+			for _, m := range matches {
+				path := strings.TrimSpace(m[1])
+				dir := filepath.Dir(path)
+				if !dirMap[dir] {
+					dirMap[dir] = true
+					dirs = append(dirs, dir)
+				}
+				ext := strings.ToLower(filepath.Ext(path))
+				if ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp" {
+					imageArgs = append(imageArgs, "-i", path)
+				}
+				content = strings.ReplaceAll(content, m[0], "[Attached File: "+path+"]")
+			}
+			sb.WriteString(fmt.Sprintf("%s:\n%s\n\n", role, content))
 		}
 	}
 
@@ -167,7 +194,12 @@ func generateCodexCLI(ctx context.Context, cfg models.LLMConfig, history []model
 	if systemPrompt != "" {
 		args = append(args, "-c", fmt.Sprintf("developer_instructions=%q", systemPrompt))
 	}
-	args = append(args, "--skip-git-repo-check", "-")
+	args = append(args, "--skip-git-repo-check")
+	for _, dir := range dirs {
+		args = append(args, "--add-dir", dir)
+	}
+	args = append(args, imageArgs...)
+	args = append(args, "-")
 
 	cmd := exec.CommandContext(reqCtx, "codex", args...)
 	cmd.Stdin = strings.NewReader(sb.String())
