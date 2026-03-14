@@ -2,10 +2,15 @@ package provider
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
+	"regexp"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"shachiku/core/memory"
 	"shachiku/core/models"
@@ -48,14 +53,67 @@ func generateOpenAI(ctx context.Context, cfg models.LLMConfig, history []models.
 		},
 	}
 
+	fileRegex := regexp.MustCompile(`(?m)^@(/.*)$`)
+
 	for _, msg := range history {
 		role := openai.ChatMessageRoleUser
 		if msg.Role == "agent" {
 			role = openai.ChatMessageRoleAssistant
 		}
+
+		content := msg.Content
+		matches := fileRegex.FindAllStringSubmatch(content, -1)
+
+		if len(matches) == 0 {
+			messages = append(messages, openai.ChatCompletionMessage{
+				Role:    role,
+				Content: content,
+			})
+			continue
+		}
+
+		var parts []openai.ChatMessagePart
+		for _, m := range matches {
+			path := strings.TrimSpace(m[1])
+			content = strings.ReplaceAll(content, m[0], "")
+
+			data, err := os.ReadFile(path)
+			if err != nil {
+				continue // skip on error
+			}
+
+			contentType := http.DetectContentType(data)
+			if strings.HasPrefix(contentType, "image/") {
+				parts = append(parts, openai.ChatMessagePart{
+					Type: openai.ChatMessagePartTypeImageURL,
+					ImageURL: &openai.ChatMessageImageURL{
+						URL: fmt.Sprintf("data:%s;base64,%s", contentType, base64.StdEncoding.EncodeToString(data)),
+					},
+				})
+			} else if utf8.Valid(data) {
+				parts = append(parts, openai.ChatMessagePart{
+					Type: openai.ChatMessagePartTypeText,
+					Text: fmt.Sprintf("\n\n[Attached File: %s]\n%s\n", path, string(data)),
+				})
+			} else {
+				parts = append(parts, openai.ChatMessagePart{
+					Type: openai.ChatMessagePartTypeText,
+					Text: fmt.Sprintf("\n\n[Attached File: %s] (binary file omitted)\n", path),
+				})
+			}
+		}
+
+		content = strings.TrimSpace(content)
+		if content != "" {
+			parts = append(parts, openai.ChatMessagePart{
+				Type: openai.ChatMessagePartTypeText,
+				Text: content,
+			})
+		}
+
 		messages = append(messages, openai.ChatCompletionMessage{
-			Role:    role,
-			Content: msg.Content,
+			Role:         role,
+			MultiContent: parts,
 		})
 	}
 
@@ -97,5 +155,11 @@ func generateOpenAI(ctx context.Context, cfg models.LLMConfig, history []models.
 	}
 
 	memory.LogTokenUsage(taskID, promptTokens, completionTokens)
-	return resp.Choices[0].Message.Content, nil
+
+	finalContent := resp.Choices[0].Message.Content
+	if reasoning := resp.Choices[0].Message.ReasoningContent; reasoning != "" {
+		finalContent = fmt.Sprintf("[[thought]]\n%s\n[[/thought]]\n%s", reasoning, finalContent)
+	}
+
+	return finalContent, nil
 }

@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"shachiku/core/memory"
 	"shachiku/core/models"
@@ -81,10 +82,15 @@ func generateOpenRouter(ctx context.Context, cfg models.LLMConfig, history []mod
 						URL: fmt.Sprintf("data:%s;base64,%s", contentType, base64.StdEncoding.EncodeToString(data)),
 					},
 				})
-			} else {
+			} else if utf8.Valid(data) {
 				parts = append(parts, openai.ChatMessagePart{
 					Type: openai.ChatMessagePartTypeText,
 					Text: fmt.Sprintf("\n\n[Attached File: %s]\n%s\n", path, string(data)),
+				})
+			} else {
+				parts = append(parts, openai.ChatMessagePart{
+					Type: openai.ChatMessagePartTypeText,
+					Text: fmt.Sprintf("\n\n[Attached File: %s] (binary file omitted)\n", path),
 				})
 			}
 		}
@@ -140,5 +146,11 @@ func generateOpenRouter(ctx context.Context, cfg models.LLMConfig, history []mod
 	}
 
 	memory.LogTokenUsage(taskID, promptTokens, completionTokens)
-	return resp.Choices[0].Message.Content, nil
+
+	finalContent := resp.Choices[0].Message.Content
+	if reasoning := resp.Choices[0].Message.ReasoningContent; reasoning != "" {
+		finalContent = fmt.Sprintf("[[thought]]\n%s\n[[/thought]]\n%s", reasoning, finalContent)
+	}
+
+	return finalContent, nil
 }
