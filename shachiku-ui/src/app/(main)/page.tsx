@@ -110,7 +110,7 @@ export default function ChatPage() {
           ) : (
             messages.map((msg, idx) => {
               const { files, text } = extractMessageParts(msg.Content || "");
-              const hasTextBubble = text || msg.Thought || (loading && idx === messages.length - 1);
+              const hasTextBubble = !!text || (loading && idx === messages.length - 1);
 
               return (
                 <div
@@ -124,6 +124,18 @@ export default function ChatPage() {
                   )}
 
                   <div className={`flex flex-col gap-2 max-w-[80%] ${msg.Role === "user" ? "items-end" : "items-start"}`}>
+                    {msg.Thought && (
+                      <details className={`group border rounded-lg bg-background shadow-sm w-max max-w-full ${msg.Role === "user" ? "self-end" : "self-start"}`}>
+                        <summary className="cursor-pointer font-medium text-xs px-3 py-2 text-muted-foreground hover:bg-muted/50 select-none list-none flex items-center gap-1 transition-colors">
+                          <ChevronRightIcon className="h-3 w-3 transition-transform group-open:rotate-90" />
+                          {t("chat.thoughtProcess", "Thought Process")}
+                        </summary>
+                        <div className="p-3 pt-2 text-xs text-foreground border-t bg-muted/10 whitespace-pre-wrap max-h-64 overflow-y-auto font-sans leading-relaxed">
+                          {msg.Thought}
+                        </div>
+                      </details>
+                    )}
+
                     {files.length > 0 && (
                       <div className="flex flex-col gap-2 w-full">
                         {files.map((path, i) => {
@@ -156,18 +168,6 @@ export default function ChatPage() {
                           </div>
                         ) : (
                           <div className="prose prose-sm max-w-none break-words dark:prose-invert">
-                            {msg.Thought && (
-                              <details className="mb-4 group border rounded-md">
-                                <summary className="cursor-pointer font-medium text-xs px-3 py-2 text-muted-foreground hover:bg-muted/50 select-none list-none flex items-center gap-1 transition-colors">
-                                  <ChevronRightIcon className="h-3 w-3 transition-transform group-open:rotate-90" />
-                                  {t("chat.thoughtProcess", "Thought Process")}
-                                </summary>
-                                <div className="p-3 pt-2 text-xs text-muted-foreground border-t bg-muted/10 whitespace-pre-wrap max-h-64 overflow-y-auto font-sans leading-relaxed">
-                                  {msg.Thought}
-                                </div>
-                              </details>
-                            )}
-
                             {loading && idx === messages.length - 1 ? (
                               <div className="flex items-start gap-2 text-muted-foreground">
                                 {(!text) && (
