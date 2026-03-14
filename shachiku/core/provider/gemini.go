@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -59,19 +60,56 @@ func generateGemini(ctx context.Context, cfg models.LLMConfig, history []models.
 				continue // skip on error
 			}
 
-			contentType := http.DetectContentType(data)
-			if strings.HasPrefix(contentType, "image/") {
-				format := strings.TrimPrefix(contentType, "image/")
-				parts = append(parts, genai.ImageData(format, data))
-			} else if contentType == "application/pdf" {
+			ext := strings.ToLower(filepath.Ext(path))
+			mimeType := ""
+			switch ext {
+			case ".png":
+				mimeType = "image/png"
+			case ".jpeg", ".jpg":
+				mimeType = "image/jpeg"
+			case ".webp":
+				mimeType = "image/webp"
+			case ".heic":
+				mimeType = "image/heic"
+			case ".heif":
+				mimeType = "image/heif"
+			case ".pdf":
+				mimeType = "application/pdf"
+			case ".mp3":
+				mimeType = "audio/mp3"
+			case ".ogg":
+				mimeType = "audio/ogg"
+			case ".wav":
+				mimeType = "audio/wav"
+			case ".aac":
+				mimeType = "audio/aac"
+			case ".flac":
+				mimeType = "audio/flac"
+			case ".mp4":
+				mimeType = "video/mp4"
+			case ".mpeg":
+				mimeType = "video/mpeg"
+			case ".mov":
+				mimeType = "video/quicktime"
+			case ".webm":
+				mimeType = "video/webm"
+			default:
+				// Fallback to DetectContentType for images
+				detected := http.DetectContentType(data)
+				if strings.HasPrefix(detected, "image/") {
+					mimeType = detected
+				}
+			}
+
+			if mimeType != "" {
 				parts = append(parts, genai.Blob{
-					MIMEType: contentType,
+					MIMEType: mimeType,
 					Data:     data,
 				})
 			} else if utf8.Valid(data) {
 				parts = append(parts, genai.Text(fmt.Sprintf("\n\n[Attached File: %s]\n%s\n", path, string(data))))
 			} else {
-				parts = append(parts, genai.Text(fmt.Sprintf("\n\n[Attached File: %s] (binary file omitted)\n", path)))
+				parts = append(parts, genai.Text(fmt.Sprintf("\n\n[Attached File: %s] (binary file omitted, no direct support. Use bash/python tools to read if needed.)\n", path)))
 			}
 		}
 

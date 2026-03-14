@@ -98,7 +98,7 @@ func generateOpenAI(ctx context.Context, cfg models.LLMConfig, history []models.
 			} else {
 				parts = append(parts, openai.ChatMessagePart{
 					Type: openai.ChatMessagePartTypeText,
-					Text: fmt.Sprintf("\n\n[Attached File: %s] (binary file omitted)\n", path),
+					Text: fmt.Sprintf("\n\n[Attached File: %s] (binary file omitted, no direct support. Use bash/python tools to read if needed.)\n", path),
 				})
 			}
 		}

@@ -56,7 +56,7 @@ func generateAnthropic(ctx context.Context, cfg models.LLMConfig, history []mode
 				// Text files
 				blocks = append(blocks, anthropic.NewTextBlock(fmt.Sprintf("\n\n[Attached File: %s]\n%s\n", path, string(data))))
 			} else {
-				blocks = append(blocks, anthropic.NewTextBlock(fmt.Sprintf("\n\n[Attached File: %s] (binary file omitted)\n", path)))
+				blocks = append(blocks, anthropic.NewTextBlock(fmt.Sprintf("\n\n[Attached File: %s] (binary file omitted, no direct support. Use bash/python tools to read if needed.)\n", path)))
 			}
 		}
 
