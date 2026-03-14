@@ -15,7 +15,7 @@ require (
 	github.com/playwright-community/playwright-go v0.5700.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sashabaranov/go-openai v1.41.2
-	github.com/shachiku-ai/shachiku-cli-bridge v0.0.6
+	github.com/shachiku-ai/shachiku-cli-bridge v0.0.0-00010101000000-000000000000
 	golang.org/x/crypto v0.48.0
 	google.golang.org/api v0.269.0
 	gorm.io/gorm v1.31.1
