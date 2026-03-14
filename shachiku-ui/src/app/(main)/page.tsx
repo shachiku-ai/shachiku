@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
-import { SendIcon, BotIcon, UserIcon, Loader2Icon, ChevronRightIcon, BrushCleaning } from "lucide-react"
+import { SendIcon, BotIcon, UserIcon, Loader2Icon, ChevronRightIcon, BrushCleaning, FileIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -46,6 +46,43 @@ export default function ChatPage() {
     await handleSendContext(e, msg)
   }
 
+  const renderMessageText = (content: string, isUser: boolean) => {
+    if (!content) return null;
+    return (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
+        components={{
+          ...(isUser ? {
+            p: ({ node: _, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+            a: ({ node: _, ...props }) => <a className="underline hover:opacity-80" {...props} />
+          } : {}),
+          img: ({ node: _, ...props }) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="max-w-full h-auto rounded-lg my-2 shadow-sm" {...props} alt={props.alt || ""} />
+          )
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    );
+  };
+
+  const extractMessageParts = (content: string) => {
+    if (!content) return { files: [], text: "" };
+    const parts = content.split(/(^@\/.*$)/m);
+    const files: string[] = [];
+    const textParts: string[] = [];
+    parts.forEach(p => {
+      if (p.startsWith("@/")) {
+        files.push(p.substring(1).trim());
+      } else if (p) {
+        textParts.push(p);
+      }
+    });
+    return { files, text: textParts.join("").trim() };
+  };
+
   return (
     <div className="absolute inset-0 flex flex-col overflow-hidden md:rounded-xl">
       <SiteHeader title={t("navMain.chat", "Chat & History")}>
@@ -71,105 +108,97 @@ export default function ChatPage() {
               </p>
             </div>
           ) : (
-            messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex gap-3 ${msg.Role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                {msg.Role !== "user" && (
-                  <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-md border bg-background shadow-sm">
-                    {msg.Role === "agent" ? <BotIcon className="h-4 w-4" /> : <BotIcon className="h-4 w-4 text-destructive" />}
-                  </div>
-                )}
-                <div
-                  className={`rounded-lg px-4 py-2 max-w-[80%] ${msg.Role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : msg.Role === "system"
-                      ? "bg-destructive/10 text-destructive text-sm"
-                      : "bg-muted"
-                    }`}
-                >
-                  {msg.Role === "user" ? (
-                    <div className="whitespace-pre-wrap break-words">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        rehypePlugins={[rehypeRaw]}
-                        components={{
-                          p: ({ node: _, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-                          img: ({ node: _, ...props }) => (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img className="max-w-full h-auto rounded-lg my-2 shadow-sm" {...props} alt={props.alt || ""} />
-                          ),
-                          a: ({ node: _, ...props }) => <a className="underline hover:opacity-80" {...props} />
-                        }}
-                      >
-                        {msg.Content}
-                      </ReactMarkdown>
-                    </div>
-                  ) : (
-                    <div className="prose prose-sm max-w-none break-words dark:prose-invert">
-                      {msg.Thought && (
-                        <details className="mb-4 group border rounded-md">
-                          <summary className="cursor-pointer font-medium text-xs px-3 py-2 text-muted-foreground hover:bg-muted/50 select-none list-none flex items-center gap-1 transition-colors">
-                            <ChevronRightIcon className="h-3 w-3 transition-transform group-open:rotate-90" />
-                            {t("chat.thoughtProcess", "Thought Process")}
-                          </summary>
-                          <div className="p-3 pt-2 text-xs text-muted-foreground border-t bg-muted/10 whitespace-pre-wrap max-h-64 overflow-y-auto font-sans leading-relaxed">
-                            {msg.Thought}
-                          </div>
-                        </details>
-                      )}
+            messages.map((msg, idx) => {
+              const { files, text } = extractMessageParts(msg.Content || "");
+              const hasTextBubble = text || msg.Thought || (loading && idx === messages.length - 1);
 
-                      {loading && idx === messages.length - 1 ? (
-                        <div className="flex items-start gap-2 text-muted-foreground">
-                          {(!msg.Content) && (
-                            <Loader2Icon className="h-4 w-4 animate-spin mt-0.5 shrink-0" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            {msg.Content ? (
-                              <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                rehypePlugins={[rehypeRaw]}
-                                components={{
-                                  img: ({ node: _, ...props }) => (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img className="max-w-full h-auto rounded-lg my-2 shadow-sm" {...props} alt={props.alt || ""} />
-                                  )
-                                }}
-                              >
-                                {msg.Content}
-                              </ReactMarkdown>
+              return (
+                <div
+                  key={idx}
+                  className={`flex gap-3 ${msg.Role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  {msg.Role !== "user" && (
+                    <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-md border bg-background shadow-sm">
+                      {msg.Role === "agent" ? <BotIcon className="h-4 w-4" /> : <BotIcon className="h-4 w-4 text-destructive" />}
+                    </div>
+                  )}
+
+                  <div className={`flex flex-col gap-2 max-w-[80%] ${msg.Role === "user" ? "items-end" : "items-start"}`}>
+                    {files.length > 0 && (
+                      <div className="flex flex-col gap-2 w-full">
+                        {files.map((path, i) => {
+                          const filename = path.split("/").pop() || path;
+                          return (
+                            <div key={i} className={`p-3 bg-background rounded-lg border flex items-center gap-3 shadow-sm text-foreground w-max max-w-full ${msg.Role === "user" ? "self-end" : "self-start"}`}>
+                              <FileIcon className="h-8 w-8 text-primary shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate" title={filename}>{filename}</p>
+                                <p className="text-xs text-muted-foreground truncate opacity-70" title={path}>{path}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {hasTextBubble && (
+                      <div
+                        className={`rounded-lg px-4 py-2 w-max max-w-full ${msg.Role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : msg.Role === "system"
+                            ? "bg-destructive/10 text-destructive text-sm"
+                            : "bg-muted"
+                          }`}
+                      >
+                        {msg.Role === "user" ? (
+                          <div className="whitespace-pre-wrap break-words">
+                            {renderMessageText(text, true)}
+                          </div>
+                        ) : (
+                          <div className="prose prose-sm max-w-none break-words dark:prose-invert">
+                            {msg.Thought && (
+                              <details className="mb-4 group border rounded-md">
+                                <summary className="cursor-pointer font-medium text-xs px-3 py-2 text-muted-foreground hover:bg-muted/50 select-none list-none flex items-center gap-1 transition-colors">
+                                  <ChevronRightIcon className="h-3 w-3 transition-transform group-open:rotate-90" />
+                                  {t("chat.thoughtProcess", "Thought Process")}
+                                </summary>
+                                <div className="p-3 pt-2 text-xs text-muted-foreground border-t bg-muted/10 whitespace-pre-wrap max-h-64 overflow-y-auto font-sans leading-relaxed">
+                                  {msg.Thought}
+                                </div>
+                              </details>
+                            )}
+
+                            {loading && idx === messages.length - 1 ? (
+                              <div className="flex items-start gap-2 text-muted-foreground">
+                                {(!text) && (
+                                  <Loader2Icon className="h-4 w-4 animate-spin mt-0.5 shrink-0" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  {text ? (
+                                    renderMessageText(text, false)
+                                  ) : (
+                                    <span className="italic text-sm">{msg.Thought ? "" : t("chat.thinking", "Thinking...")}</span>
+                                  )}
+                                </div>
+                              </div>
                             ) : (
-                              <span className="italic text-sm">{msg.Thought ? "" : t("chat.thinking", "Thinking...")}</span>
+                              text ? (
+                                renderMessageText(text, false)
+                              ) : null
                             )}
                           </div>
-                        </div>
-                      ) : (
-                        msg.Content ? (
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeRaw]}
-                            components={{
-                              img: ({ node: _, ...props }) => (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img className="max-w-full h-auto rounded-lg my-2 shadow-sm" {...props} alt={props.alt || ""} />
-                              )
-                            }}
-                          >
-                            {msg.Content}
-                          </ReactMarkdown>
-                        ) : null
-                      )}
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {msg.Role === "user" && (
+                    <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-md border bg-primary text-primary-foreground shadow-sm">
+                      <UserIcon className="h-4 w-4" />
                     </div>
                   )}
                 </div>
-                {msg.Role === "user" && (
-                  <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-md border bg-primary text-primary-foreground shadow-sm">
-                    <UserIcon className="h-4 w-4" />
-                  </div>
-                )}
-              </div>
-            ))
+              )
+            })
           )}
           <div ref={messagesEndRef} />
         </div>
