@@ -71,6 +71,23 @@ func parseAgentReply(reply string) (thought string, jsonStr string, finalReply s
 			reply = strings.TrimSpace(reply[:thinkStart] + "\n" + reply[thinkEnd+8:])
 			jsonStr = reply
 			finalReply = reply
+
+			// Fallback: if everything was inside <think>, treat the thought as the main content
+			if strings.TrimSpace(reply) == "" {
+				jsonStr = thought
+				finalReply = thought
+			}
+		} else {
+			// Unclosed <think> tag fallback
+			thought = strings.TrimSpace(reply[thinkStart+7:])
+			reply = strings.TrimSpace(reply[:thinkStart])
+			jsonStr = reply
+			finalReply = reply
+
+			if strings.TrimSpace(reply) == "" {
+				jsonStr = thought
+				finalReply = thought
+			}
 		}
 	}
 

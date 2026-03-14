@@ -137,6 +137,21 @@ func executeTaskWithLoop(task models.Task) {
 				reply = strings.TrimSpace(reply[:thinkStart] + "\n" + reply[thinkEnd+8:])
 				jsonStr = reply
 				finalReply = reply // Update finalReply so it doesn't contain the thought tags
+
+				if strings.TrimSpace(reply) == "" {
+					jsonStr = thought
+					finalReply = thought
+				}
+			} else {
+				thought = strings.TrimSpace(reply[thinkStart+7:])
+				reply = strings.TrimSpace(reply[:thinkStart])
+				jsonStr = reply
+				finalReply = reply
+
+				if strings.TrimSpace(reply) == "" {
+					jsonStr = thought
+					finalReply = thought
+				}
 			}
 		}
 
