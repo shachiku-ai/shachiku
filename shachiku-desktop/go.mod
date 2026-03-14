@@ -17,9 +17,11 @@ require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
+	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/anthropics/anthropic-sdk-go v1.26.0 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
+	github.com/bwmarrin/discordgo v0.29.0 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect
 	github.com/bytedance/sonic/loader v0.5.0 // indirect
@@ -28,6 +30,7 @@ require (
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/coder/websocket v1.8.14 // indirect
+	github.com/creack/pty v1.1.24 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.8.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -62,6 +65,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.12 // indirect
 	github.com/googleapis/gax-go/v2 v2.17.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
@@ -92,6 +96,7 @@ require (
 	github.com/samber/lo v1.52.0 // indirect
 	github.com/sashabaranov/go-openai v1.41.2 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
+	github.com/shachiku-ai/shachiku-cli-bridge v0.0.8 // indirect
 	github.com/skeema/knownhosts v1.3.2 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect

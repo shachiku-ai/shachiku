@@ -8,8 +8,7 @@
 		<string>Shachiku Desktop Client</string>
 		<key>CFBundleIconFile</key>
 		<string>icons</string>
-		<key>CFBundleIconName</key>
-		<string>appicon</string>
+
 		<key>CFBundleIdentifier</key>
 		<string>com.shachiku.desktop</string>
 		<key>CFBundleName</key>

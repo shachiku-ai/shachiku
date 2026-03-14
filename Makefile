@@ -75,16 +75,17 @@ build-darwin-desktop:
 	@echo "4. Creating DMG image..."
 	@echo "========================================"
 	rm -f dist/shachiku-desktop-macos-arm64.dmg
-	create-dmg \
+	set -o pipefail && create-dmg \
 		--volname "Shachiku" \
 		--window-pos 200 120 \
 		--window-size 600 400 \
 		--icon-size 100 \
 		--icon "Shachiku.app" 150 190 \
+		--no-internet-enable \
 		--hide-extension "Shachiku.app" \
 		--app-drop-link 450 190 \
 		"dist/shachiku-desktop-macos-arm64.dmg" \
-		"dist/Shachiku.app"
+		"dist/Shachiku.app" | grep -v "Not setting 'internet-enable'"
 	@echo "========================================"
 	@echo "✨ Desktop builds complete!"
 	@echo "🎯 Executable path: dist/"
