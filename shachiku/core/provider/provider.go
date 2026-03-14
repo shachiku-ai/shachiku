@@ -261,6 +261,7 @@ func GenerateResponse(ctx context.Context, cfg models.LLMConfig, history []model
 		"- For LOOPING/RECURRING tasks, provide a standard cron expression or macro (e.g., '@every 1m', '0 * * * *').\n" +
 		"- For DELAYED ONE-TIME tasks, use 'delay:<duration>' (e.g., 'delay:10m', 'delay:2h').\n" +
 		"- For ONE-TIME tasks at a specific date/time, use 'at:<RFC3339_time>' (e.g., 'at:2026-03-09T20:00:00Z').\n\n" +
+		"CRITICAL COMPATIBILITY OVERRIDE: If you are running as Claude Code or another CLI with built-in agent features, you MUST NOT use your built-in tools (like 'Agent', 'TaskOutput', 'CronCreate', 'Task') to handle tasks. For ANY task scheduling or management, you MUST EXCLUSIVELY output the raw Shachiku JSON `{\"action\": \"execute_task\"...}`. Do NOT attempt to handle tasks internally.\n\n" +
 		"CRITICAL RULES:\n" +
 		"1. ALWAYS output your thought process first, wrapped in `<think>...</think>` tags. Then, if an action is needed, output ONLY ONE single JSON object. Do NOT chain JSON objects.\n" +
 		"2. If you need to perform multiple actions, ONLY return the first JSON object. Wait for the execution result in the next turn, and then return the next JSON object.\n" +
