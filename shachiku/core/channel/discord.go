@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -62,8 +65,18 @@ func (m *DiscordModule) messageCreate(s *discordgo.Session, msg *discordgo.Messa
 
 	var attachedFiles []string
 	for _, attachment := range msg.Attachments {
-		if path, err := downloadFileToTmp(attachment.URL, attachment.Filename); err == nil {
+		filename := attachment.Filename
+		if filename == "" {
+			filename = "file"
+		}
+		if attachment.ContentType != "" && strings.Contains(attachment.ContentType, "audio/ogg") && filepath.Ext(filename) == "" {
+			filename += ".ogg"
+		}
+
+		if path, err := downloadFileToTmp(attachment.URL, filename); err == nil {
 			attachedFiles = append(attachedFiles, path)
+		} else {
+			log.Printf("[Discord] Failed to download attachment: %v", err)
 		}
 	}
 
@@ -147,6 +160,55 @@ func (m *DiscordModule) messageCreate(s *discordgo.Session, msg *discordgo.Messa
 		}
 	} else {
 		s.ChannelMessageSend(msg.ChannelID, finalReply)
+	}
+
+	m.sendFilesFromText(s, msg.ChannelID, finalReply)
+}
+
+func (m *DiscordModule) sendFilesFromText(s *discordgo.Session, channelID string, text string) {
+	sent := make(map[string]bool)
+
+	sendOneFile := func(path string) {
+		if sent[path] {
+			return
+		}
+		info, err := os.Stat(path)
+		if err == nil && !info.IsDir() && info.Size() < 25*1024*1024 { // Discord 25MB limit
+			f, err := os.Open(path)
+			if err == nil {
+				_, _ = s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+					Files: []*discordgo.File{
+						{
+							Name:   info.Name(),
+							Reader: f,
+						},
+					},
+				})
+				f.Close()
+				sent[path] = true
+			}
+		}
+	}
+
+	// 1. Markdown Links
+	linkRegex := regexp.MustCompile(`\[.*?\]\((/.*?)\)`)
+	matches := linkRegex.FindAllStringSubmatch(text, -1)
+	for _, match := range matches {
+		if len(match) == 2 {
+			sendOneFile(match[1])
+		}
+	}
+
+	// 2. Raw paths
+	pathRegex := regexp.MustCompile(`(/[a-zA-Z0-9_\-\./]+)`)
+	matches2 := pathRegex.FindAllStringSubmatch(text, -1)
+	for _, match := range matches2 {
+		if len(match) == 2 {
+			path := match[1]
+			if strings.Contains(path, "/tmp/") || strings.Contains(path, "shachiku") || strings.Contains(path, ".gemini/") || strings.Contains(path, "artifacts") {
+				sendOneFile(path)
+			}
+		}
 	}
 }
 
