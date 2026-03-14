@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -66,13 +67,15 @@ func generateOpenAI(ctx context.Context, cfg models.LLMConfig, history []models.
 	reqCtx, cancel := context.WithTimeout(ctx, 300*time.Second)
 	defer cancel()
 
-	resp, err := client.CreateChatCompletion(
-		reqCtx,
-		openai.ChatCompletionRequest{
-			Model:    model,
-			Messages: messages,
-		},
-	)
+	req := openai.ChatCompletionRequest{
+		Model:    model,
+		Messages: messages,
+	}
+
+	reqJSON, _ := json.MarshalIndent(req, "", "  ")
+	fmt.Printf("=== [OpenAI API Request] ===\n%s\n============================\n", string(reqJSON))
+
+	resp, err := client.CreateChatCompletion(reqCtx, req)
 
 	if err != nil {
 		return "", fmt.Errorf("openai error: %v", err)

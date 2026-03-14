@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -73,6 +74,15 @@ func generateGemini(ctx context.Context, cfg models.LLMConfig, history []models.
 
 	ctxReq, cancel := context.WithTimeout(ctx, 300*time.Second)
 	defer cancel()
+
+	reqMap := map[string]interface{}{
+		"Model":             modelID,
+		"SystemInstruction": systemPrompt,
+		"History":           cs.History,
+		"LastParts":         lastParts,
+	}
+	reqJSON, _ := json.MarshalIndent(reqMap, "", "  ")
+	fmt.Printf("=== [Gemini API Request] ===\n%s\n============================\n", string(reqJSON))
 
 	resp, err := cs.SendMessage(ctxReq, lastParts...)
 	if err != nil {

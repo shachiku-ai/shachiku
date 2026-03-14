@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -48,12 +49,17 @@ func generateAnthropic(ctx context.Context, cfg models.LLMConfig, history []mode
 	reqCtx, cancel := context.WithTimeout(ctx, 300*time.Second)
 	defer cancel()
 
-	resp, err := client.Messages.New(reqCtx, anthropic.MessageNewParams{
+	req := anthropic.MessageNewParams{
 		Model:     anthropic.Model(model),
 		MaxTokens: 8192,
 		System:    []anthropic.TextBlockParam{{Text: systemPrompt}},
 		Messages:  messages,
-	})
+	}
+
+	reqJSON, _ := json.MarshalIndent(req, "", "  ")
+	fmt.Printf("=== [Anthropic API Request] ===\n%s\n===============================\n", string(reqJSON))
+
+	resp, err := client.Messages.New(reqCtx, req)
 
 	if err != nil {
 		return "", fmt.Errorf("anthropic error: %v", err)
