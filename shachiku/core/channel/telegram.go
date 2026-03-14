@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -65,7 +67,8 @@ func (m *TelegramModule) listen(ctx context.Context) {
 			if update.Message == nil {
 				continue
 			}
-			if update.Message.Text == "" && update.Message.Caption == "" && update.Message.Document == nil && len(update.Message.Photo) == 0 {
+			// Allow voice and audio messages to be processed
+			if update.Message.Text == "" && update.Message.Caption == "" && update.Message.Document == nil && len(update.Message.Photo) == 0 && update.Message.Voice == nil && update.Message.Audio == nil {
 				continue
 			}
 
@@ -82,6 +85,28 @@ func (m *TelegramModule) handleMessage(msg *tgbotapi.Message) {
 	}
 
 	var attachedFiles []string
+
+	if msg.Voice != nil {
+		fileURL, err := m.bot.GetFileDirectURL(msg.Voice.FileID)
+		if err == nil {
+			if path, err := downloadFileToTmp(fileURL, "voice.ogg"); err == nil {
+				attachedFiles = append(attachedFiles, path)
+			}
+		}
+	}
+
+	if msg.Audio != nil {
+		fileURL, err := m.bot.GetFileDirectURL(msg.Audio.FileID)
+		if err == nil {
+			filename := msg.Audio.FileName
+			if filename == "" {
+				filename = "audio.mp3"
+			}
+			if path, err := downloadFileToTmp(fileURL, filename); err == nil {
+				attachedFiles = append(attachedFiles, path)
+			}
+		}
+	}
 
 	if msg.Document != nil {
 		fileURL, err := m.bot.GetFileDirectURL(msg.Document.FileID)
@@ -177,6 +202,54 @@ func (m *TelegramModule) handleMessage(msg *tgbotapi.Message) {
 	if sendErr != nil {
 		replyMsg.ParseMode = ""
 		m.bot.Send(replyMsg)
+	}
+
+	// Extract and send files from the AI's final reply
+	m.sendFilesFromText(chatID, finalReply)
+}
+
+func (m *TelegramModule) sendFilesFromText(chatID int64, text string) {
+	sent := make(map[string]bool)
+
+	// Look for markdown links: [name](/path/to/file)
+	linkRegex := regexp.MustCompile(`\[.*?\]\((/.*?)\)`)
+	matches := linkRegex.FindAllStringSubmatch(text, -1)
+
+	for _, match := range matches {
+		if len(match) == 2 {
+			path := match[1]
+			if sent[path] {
+				continue
+			}
+			info, err := os.Stat(path)
+			if err == nil && !info.IsDir() && info.Size() < 50*1024*1024 {
+				doc := tgbotapi.NewDocument(chatID, tgbotapi.FilePath(path))
+				m.bot.Send(doc)
+				sent[path] = true
+			}
+		}
+	}
+
+	// Also look for raw paths that might have been mentioned
+	pathRegex := regexp.MustCompile(`(/[a-zA-Z0-9_\-\./]+)`)
+	matches2 := pathRegex.FindAllStringSubmatch(text, -1)
+	for _, match := range matches2 {
+		if len(match) == 2 {
+			path := match[1]
+			if sent[path] {
+				continue
+			}
+			info, err := os.Stat(path)
+			if err == nil && !info.IsDir() && info.Size() < 50*1024*1024 {
+				// To avoid sending system binaries or arbitrary mentioned paths, only send if they show intent
+				// or are in known output dirs/tmp
+				if strings.Contains(path, "/tmp/") || strings.Contains(path, "shachiku") || strings.Contains(path, ".gemini/") || strings.Contains(path, "artifacts") {
+					doc := tgbotapi.NewDocument(chatID, tgbotapi.FilePath(path))
+					m.bot.Send(doc)
+					sent[path] = true
+				}
+			}
+		}
 	}
 }
 
