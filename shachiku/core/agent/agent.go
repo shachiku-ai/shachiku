@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
+	"shachiku/core/config"
 	"shachiku/core/memory"
 	"shachiku/core/models"
 	"shachiku/core/provider"
@@ -284,22 +288,41 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 		maxIterations = 50
 	}
 
+	logsDir := filepath.Join(config.GetDataDir(), "logs")
+	os.MkdirAll(logsDir, 0755)
+	logFile := filepath.Join(logsDir, fmt.Sprintf("chat_%s.md", time.Now().Format("2006-01-02")))
+	f, _ := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if f != nil {
+		f.WriteString(fmt.Sprintf("\n\n## 🧑 User: %s\n*🕰️ Time: %s*\n\n", message, time.Now().Format(time.RFC3339)))
+	}
+
 	var finalReply string
 	availableSkills := skills.ListSkills()
 
 	for i := 0; i < maxIterations; i++ {
 		if ctx.Err() != nil {
 			log.Printf("[Agent] Context cancelled")
+			if f != nil {
+				f.Close()
+			}
 			return "", ctx.Err()
 		}
 
 		reply, err := provider.GenerateResponse(ctx, cfg, ctxHistory, availableSkills, memoryContext, 0)
 		if err != nil {
 			log.Printf("[Agent] Error from provider: %v", err)
+			if f != nil {
+				f.WriteString(fmt.Sprintf("**❌ Error from provider:** %v\n", err))
+				f.Close()
+			}
 			return "", err
 		}
 
 		log.Printf("[Agent] Raw Response (Iter %d):\n%s\n", i+1, reply)
+
+		if f != nil {
+			f.WriteString(fmt.Sprintf("### 🤖 Iteration %d\n**Raw Response:**\n```\n%s\n```\n\n", i+1, reply))
+		}
 
 		thought, jsonStr, parsedReply := parseAgentReply(reply)
 		finalReply = parsedReply
@@ -313,6 +336,10 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 
 		if jsonErr == nil && agentAction.Action != "" {
 			executionResult := executeAgentAction(ctx, cfg, &agentAction, ctxHistory, onStep)
+
+			if f != nil {
+				f.WriteString(fmt.Sprintf("**⚙️ Tool Execution (%s):**\n```\n%s\n```\n\n", agentAction.Action, executionResult))
+			}
 
 			ctxHistory = append(ctxHistory, models.Message{Role: "agent", Content: reply})
 
@@ -336,6 +363,11 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 				finalReply = "I have performed numerous steps in the background but reached my safety iteration limit. Please check my previous actions."
 			}
 		}
+	}
+
+	if f != nil {
+		f.WriteString(fmt.Sprintf("### ✨ Final Reply\n%s\n\n---\n", finalReply))
+		f.Close()
 	}
 
 	go saveFactAsync(cfg, message)
