@@ -248,10 +248,8 @@ func SummarizeTaskContext(ctx context.Context, cfg models.LLMConfig, taskName, t
 	return resp, nil
 }
 
-// GenerateResponse calls the configured LLM provider
-func GenerateResponse(ctx context.Context, cfg models.LLMConfig, history []models.Message, availableSkills []skills.Skill, memoryContext []string, taskID uint) (string, error) {
-	provider := resolveProvider(cfg)
-
+// BuildSystemPrompt constructs the full system prompt including skills and memory context.
+func BuildSystemPrompt(cfg models.LLMConfig, availableSkills []skills.Skill, memoryContext []string) string {
 	systemPrompt := fmt.Sprintf("You are a highly capable AI agent with access to skills, memory, and an advanced Task Scheduling system.\n"+
 		"The CURRENT DATE AND TIME is: %s. Use this as your reference for ANY relative dates, years, or times (e.g. knowing what year it currently is, or adjusting local timezones correctly).\n"+
 		"HOST OPERATING SYSTEM: %s. Please generate shell commands and scripts suitable for this OS.\n"+
@@ -310,6 +308,14 @@ func GenerateResponse(ctx context.Context, cfg models.LLMConfig, history []model
 		b.WriteString("</relevant_context_from_memory>\n")
 		systemPrompt += b.String()
 	}
+	
+	return systemPrompt
+}
+
+// GenerateResponse calls the configured LLM provider
+func GenerateResponse(ctx context.Context, cfg models.LLMConfig, history []models.Message, availableSkills []skills.Skill, memoryContext []string, taskID uint) (string, error) {
+	provider := resolveProvider(cfg)
+	systemPrompt := BuildSystemPrompt(cfg, availableSkills, memoryContext)
 
 	switch provider {
 	case "claude":

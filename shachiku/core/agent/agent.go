@@ -292,12 +292,17 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 	os.MkdirAll(logsDir, 0755)
 	logFile := filepath.Join(logsDir, fmt.Sprintf("chat_%s.md", time.Now().Format("2006-01-02")))
 	f, _ := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	
+	availableSkills := skills.ListSkills()
 	if f != nil {
 		f.WriteString(fmt.Sprintf("\n\n## 🧑 User: %s\n*🕰️ Time: %s*\n\n", message, time.Now().Format(time.RFC3339)))
+		
+		// Log the initial system prompt to provide full debugging context
+		systemPrompt := provider.BuildSystemPrompt(cfg, availableSkills, memoryContext)
+		f.WriteString(fmt.Sprintf("### 🛠️ System Prompt\n```md\n%s\n```\n\n", systemPrompt))
 	}
 
 	var finalReply string
-	availableSkills := skills.ListSkills()
 
 	for i := 0; i < maxIterations; i++ {
 		if ctx.Err() != nil {
@@ -327,8 +332,13 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 		thought, jsonStr, parsedReply := parseAgentReply(reply)
 		finalReply = parsedReply
 
-		if thought != "" && onStep != nil {
-			onStep(fmt.Sprintf("Thinking: %s", thought))
+		if thought != "" {
+			if onStep != nil {
+				onStep(fmt.Sprintf("Thinking: %s", thought))
+			}
+			if f != nil {
+				f.WriteString(fmt.Sprintf("**💭 Thinking Process:**\n```\n%s\n```\n\n", thought))
+			}
 		}
 
 		var agentAction AgentAction
