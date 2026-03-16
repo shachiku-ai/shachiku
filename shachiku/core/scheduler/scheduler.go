@@ -207,9 +207,41 @@ func executeTaskWithLoop(task models.Task) {
 				argsStr = fmt.Sprintf(`{"path":"%s", "force":%v}`, argsStr, false)
 			}
 
-			log.Printf("[Scheduler] Executing skill '%s' with args: %s", actionName, argsStr)
-			skillResult := skills.ExecuteSkill(actionName, argsStr)
-			executionResult = skillResult
+			if actionName == "search_memory" {
+				var query string
+				var payload struct {
+					Query string `json:"query"`
+				}
+				if err := json.Unmarshal([]byte(argsStr), &payload); err == nil && payload.Query != "" {
+					query = payload.Query
+				} else {
+					query = argsStr
+				}
+
+				if query == "" {
+					skillResult := "Error: missing query argument"
+					executionResult = skillResult
+				} else {
+					emb, err := provider.GenerateEmbedding(cfg, query)
+					if err != nil {
+						skillResult := fmt.Sprintf("Error generating embedding: %v", err)
+						executionResult = skillResult
+					} else {
+						results, searchErr := memory.SearchMemory(emb, 10)
+						if searchErr != nil || len(results) == 0 {
+							skillResult := "No relevant memories found."
+							executionResult = skillResult
+						} else {
+							skillResult := "Recall results:\n- " + strings.Join(results, "\n- ")
+							executionResult = skillResult
+						}
+					}
+				}
+			} else {
+				log.Printf("[Scheduler] Executing skill '%s' with args: %s", actionName, argsStr)
+				skillResult := skills.ExecuteSkill(actionName, argsStr)
+				executionResult = skillResult
+			}
 
 			ctxHistory = append(ctxHistory, models.Message{Role: "agent", Content: reply})
 			systemPromptPrompt := fmt.Sprintf("You just executed the action/skill '%s'.\nThe result was:\n--------\n%s\n--------\nAnalyze the result. If you need to perform MORE actions to accomplish the task, output the NEXT JSON action. If the task is fully complete, provide the final report naturally without JSON.", actionName, executionResult)

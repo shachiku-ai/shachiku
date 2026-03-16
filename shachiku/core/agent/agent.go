@@ -234,6 +234,37 @@ func executeAgentAction(ctx context.Context, cfg models.LLMConfig, action *Agent
 		}
 		return fmt.Sprintf("Successfully deleted and stopped %d task(s) named '%s'.", len(tasks), action.Name)
 
+	case "search_memory":
+		var payload struct {
+			Query string `json:"query"`
+		}
+		var query string
+		argsStr := formatSkillArgs(actionName, action)
+		if err := json.Unmarshal([]byte(argsStr), &payload); err == nil && payload.Query != "" {
+			query = payload.Query
+		} else {
+			query = argsStr // Fallback if they provide just a string
+		}
+
+		if query == "" {
+			return "Error: missing query argument"
+		}
+
+		if onStep != nil {
+			onStep(fmt.Sprintf("Searching memory for '%s'...", query))
+		}
+
+		emb, err := provider.GenerateEmbedding(cfg, query)
+		if err != nil {
+			return fmt.Sprintf("Error generating embedding: %v", err)
+		}
+
+		results, searchErr := memory.SearchMemory(emb, 10)
+		if searchErr != nil || len(results) == 0 {
+			return "No relevant memories found."
+		}
+		return "Recall results:\n- " + strings.Join(results, "\n- ")
+
 	default:
 		argsStr := formatSkillArgs(actionName, action)
 		return skills.ExecuteSkill(actionName, argsStr)

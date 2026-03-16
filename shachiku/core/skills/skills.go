@@ -29,6 +29,7 @@ func ListSkills() []Skill {
 		{Name: "install_skill", Description: "Install a skill from a local folder. IF the user provides a URL or zip/tar file, you MUST FIRST use the 'bash' skill to download and extract it to the " + tmpDir + " directory. THEN, use this skill. Argument must be JSON: {\"path\": \"<local_folder_path>\", \"force\": false}. If risks are detected, you must ask the user for approval and then use force=true.", IsBuiltin: true},
 		{Name: "playwright", Description: "Control a web browser using Playwright. Arguments must be a JSON object: {\"action\": \"<goto/click/type/screenshot/evaluate/close>\", \"url\": \"<url>\", \"selector\": \"<css_selector>\", \"text\": \"<text_to_type/js_code>\", \"file_path\": \"<screenshot_path>\"}", IsBuiltin: true},
 		{Name: "manage_outline", Description: "Manage long-term structural project outlines in Markdown. Use this to maintain a persistent state or plan for complex tasks. Arguments must be a JSON object: {\"action\": \"<list|read|write>\", \"project\": \"<project_name>\", \"content\": \"<markdown_content_for_write>\"}", IsBuiltin: true},
+		{Name: "search_memory", Description: "Search the agent's long-term memory for specific facts, preferences, or credentials (e.g., API Keys, user names, project details). Arguments must be a JSON object: {\"query\": \"<search_phrase>\"}", IsBuiltin: true},
 	}
 
 	dynamicSkills := GetDynamicSkills()
