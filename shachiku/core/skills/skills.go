@@ -28,6 +28,7 @@ func ListSkills() []Skill {
 		{Name: "bash", Description: "Execute a shell command on the host computer (bash on Linux/macOS, cmd on Windows). Argument should be the raw command (e.g., 'ls -la' or 'npm install').", IsBuiltin: true},
 		{Name: "install_skill", Description: "Install a skill from a local folder. IF the user provides a URL or zip/tar file, you MUST FIRST use the 'bash' skill to download and extract it to the " + tmpDir + " directory. THEN, use this skill. Argument must be JSON: {\"path\": \"<local_folder_path>\", \"force\": false}. If risks are detected, you must ask the user for approval and then use force=true.", IsBuiltin: true},
 		{Name: "playwright", Description: "Control a web browser using Playwright. Arguments must be a JSON object: {\"action\": \"<goto/click/type/screenshot/evaluate/close>\", \"url\": \"<url>\", \"selector\": \"<css_selector>\", \"text\": \"<text_to_type/js_code>\", \"file_path\": \"<screenshot_path>\"}", IsBuiltin: true},
+		{Name: "manage_outline", Description: "Manage long-term structural project outlines in Markdown. Use this to maintain a persistent state or plan for complex tasks. Arguments must be a JSON object: {\"action\": \"<list|read|write>\", \"project\": \"<project_name>\", \"content\": \"<markdown_content_for_write>\"}", IsBuiltin: true},
 	}
 
 	dynamicSkills := GetDynamicSkills()
@@ -133,6 +134,8 @@ func ExecuteSkill(name string, args string) string {
 		return performInstallSkill(args)
 	case "playwright":
 		return performPlaywrightCommand(args)
+	case "manage_outline":
+		return performManageOutline(args)
 	default:
 		// Execute local skill script if present
 		return performLocalSkill(name, args)
@@ -244,6 +247,67 @@ func performWriteFile(args string) string {
 	}
 
 	return fmt.Sprintf("Successfully wrote to file '%s'.", payload.Path)
+}
+
+func performManageOutline(args string) string {
+	var payload struct {
+		Action  string `json:"action"`
+		Project string `json:"project"`
+		Content string `json:"content"`
+	}
+	if err := json.Unmarshal([]byte(args), &payload); err != nil {
+		return fmt.Sprintf("Error parsing manage_outline arguments. Ensure it is a valid JSON: %v", err)
+	}
+
+	outlinesDir := filepath.Join(config.GetDataDir(), "outlines")
+	if err := os.MkdirAll(outlinesDir, 0755); err != nil {
+		return fmt.Sprintf("Error creating outlines directory: %v", err)
+	}
+
+	switch payload.Action {
+	case "list":
+		entries, err := os.ReadDir(outlinesDir)
+		if err != nil {
+			return fmt.Sprintf("Error listing outlines: %v", err)
+		}
+		var list []string
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
+				list = append(list, strings.TrimSuffix(e.Name(), ".md"))
+			}
+		}
+		if len(list) == 0 {
+			return "No project outlines found."
+		}
+		return "Available outlines:\n- " + strings.Join(list, "\n- ")
+
+	case "read":
+		if payload.Project == "" {
+			return "Error: 'project' name is required for reading."
+		}
+		cleanName := filepath.Base(payload.Project)
+		targetPath := filepath.Join(outlinesDir, cleanName+".md")
+		data, err := os.ReadFile(targetPath)
+		if err != nil {
+			return fmt.Sprintf("Outline for project '%s' not found.", cleanName)
+		}
+		return string(data)
+
+	case "write":
+		if payload.Project == "" {
+			return "Error: 'project' name is required for writing."
+		}
+		cleanName := filepath.Base(payload.Project)
+		targetPath := filepath.Join(outlinesDir, cleanName+".md")
+		err := os.WriteFile(targetPath, []byte(payload.Content), 0644)
+		if err != nil {
+			return fmt.Sprintf("Error writing outline: %v", err)
+		}
+		return fmt.Sprintf("Successfully saved outline for project '%s'.", cleanName)
+
+	default:
+		return "Error: Invalid action. Use 'list', 'read', or 'write'."
+	}
 }
 
 func performBashCommand(command string) string {
