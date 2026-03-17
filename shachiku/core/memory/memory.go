@@ -78,11 +78,12 @@ func AddMessage(role, content string) {
 }
 
 // GetRecentHistory returns short-term memory from SQLite (last 100 messages in chronological order)
+// It explicitly filters out 'system_notification' roles so they do not pollute the LLM context.
 func GetRecentHistory() []models.Message {
 	var messages []models.Message
 	if sqlDB != nil {
-		// Fetch the latest 100 messages
-		sqlDB.Order("created_at desc").Limit(100).Find(&messages)
+		// Fetch the latest 100 messages that are NOT system notifications
+		sqlDB.Where("role != ?", "system_notification").Order("created_at desc").Limit(100).Find(&messages)
 
 		// Reverse the slice to maintain chronological order (oldest first)
 		for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {

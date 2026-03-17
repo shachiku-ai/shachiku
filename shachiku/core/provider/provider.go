@@ -249,7 +249,7 @@ func SummarizeTaskContext(ctx context.Context, cfg models.LLMConfig, taskName, t
 }
 
 // BuildSystemPrompt constructs the full system prompt including skills and memory context.
-func BuildSystemPrompt(cfg models.LLMConfig, availableSkills []skills.Skill, memoryContext []string) string {
+func BuildSystemPrompt(cfg models.LLMConfig, availableSkills []skills.Skill, memoryContext []string, isTask bool) string {
 	systemPrompt := fmt.Sprintf("You are a highly capable AI agent with access to skills, memory, and an advanced Task Scheduling system.\n"+
 		"The CURRENT DATE AND TIME is: %s. Use this as your reference for ANY relative dates, years, or times (e.g. knowing what year it currently is, or adjusting local timezones correctly).\n"+
 		"HOST OPERATING SYSTEM: %s. Please generate shell commands and scripts suitable for this OS.\n"+
@@ -289,7 +289,23 @@ func BuildSystemPrompt(cfg models.LLMConfig, availableSkills []skills.Skill, mem
 		"<rule>13. SENDING FILES: If you need to send a local file to the user, simply output a markdown link pointing directly to the absolute file path in your final response (e.g., `[Here is your file](/tmp/workspace/file.zip)`). The system will intercept this and automatically send the physical file.</rule>\n" +
 		"<rule>14. LONG-TERM PROJECT MEMORY (OUTLINES): When the user assigns a complex project, a multi-step task, or requires you to remember structured hierarchical parameters, YOU MUST proactively use the 'manage_outline' skill to write and update a persistent markdown outline. During execution, use 'read' to consult the project's current state. This is your definitive long-term project memory.</rule>\n" +
 		"<rule>15. PROACTIVE MEMORY SEARCH: The `relevant_context_from_memory` block only shows a tiny fraction of your full database. If you are missing a credential, API Key, path, or historical fact, you MUST NEVER immediately ask the user or say you don't know. ALWAYS use the `search_memory` action first to dive into the full database.</rule>\n" +
-		"</critical_rules>"
+		"</critical_rules>\n"
+
+	if isTask {
+		systemPrompt += "\n<task_execution_mode>\n" +
+			"<role>You are CURRENTLY executing an automated background task.</role>\n" +
+			"<instructions>\n" +
+			"<instruction>Use any necessary skills to gather information, then provide a human-readable final report.</instruction>\n" +
+			"<instruction>Do NOT return any JSON actions once you are done.</instruction>\n" +
+			"</instructions>\n" +
+			"<critical_requirements>\n" +
+			"<requirement>If you successfully accomplish the task, your final written report MUST start with 'SUCCESS:'.</requirement>\n" +
+			"<requirement>If you fail, lack the necessary skills, or encounter an irrecoverable error, your final report MUST start with 'ERROR:'.</requirement>\n" +
+			"<requirement>If this task is a reminder or scheduled notification, your job is to output the final reminder message IMMEDIATELY as your final report.</requirement>\n" +
+			"<requirement>DO NOT attempt to use 'bash' to run system commands like 'at' or 'cron' to schedule it for later.</requirement>\n" +
+			"</critical_requirements>\n" +
+			"</task_execution_mode>\n"
+	}
 
 	if len(availableSkills) > 0 {
 		systemPrompt += "\n\n<available_skills>\nUse them when requested or when finding information:\n"
@@ -315,7 +331,7 @@ func BuildSystemPrompt(cfg models.LLMConfig, availableSkills []skills.Skill, mem
 // GenerateResponse calls the configured LLM provider
 func GenerateResponse(ctx context.Context, cfg models.LLMConfig, history []models.Message, availableSkills []skills.Skill, memoryContext []string, taskID uint) (string, error) {
 	provider := resolveProvider(cfg)
-	systemPrompt := BuildSystemPrompt(cfg, availableSkills, memoryContext)
+	systemPrompt := BuildSystemPrompt(cfg, availableSkills, memoryContext, taskID > 0)
 
 	switch provider {
 	case "claude":

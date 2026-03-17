@@ -298,7 +298,7 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 		f.WriteString(fmt.Sprintf("\n\n## 🧑 User: %s\n*🕰️ Time: %s*\n\n", message, time.Now().Format(time.RFC3339)))
 		
 		// Log the initial system prompt to provide full debugging context
-		systemPrompt := provider.BuildSystemPrompt(cfg, availableSkills, memoryContext)
+		systemPrompt := provider.BuildSystemPrompt(cfg, availableSkills, memoryContext, false)
 		f.WriteString(fmt.Sprintf("### 🛠️ System Prompt\n```md\n%s\n```\n\n", systemPrompt))
 	}
 

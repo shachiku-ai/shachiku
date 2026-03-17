@@ -53,12 +53,19 @@ func executeTaskWithLoop(task models.Task) {
 	cfg := memory.GetLLMConfig()
 	availableSkills := skills.ListSkills()
 
-	// Initial system prompt to start the task
-	msg := fmt.Sprintf("<task_execution>\n<task_name>%s</task_name>\n<role>You are executing an automated background task.</role>\n<instructions>\n<instruction>Use any necessary skills to gather information, then provide a human-readable final report.</instruction>\n<instruction>Do NOT return any JSON actions once you are done.</instruction>\n</instructions>\n<critical_requirements>\n<requirement>If you successfully accomplish the task, your final written report MUST start with 'SUCCESS:'.</requirement>\n<requirement>If you fail, lack the necessary skills, or encounter an irrecoverable error, your final report MUST start with 'ERROR:'.</requirement>\n</critical_requirements>\n<adaptation_requirements>\n<requirement>You MUST read the provided Memory Context to understand the user's language, personality, and tone.</requirement>\n<requirement>Your final report MUST be written in the user's preferred language and match their communication style.</requirement>\n</adaptation_requirements>\n<time_context>\n<context>You are CURRENTLY executing at the scheduled time.</context>\n<context>If this task is a reminder or scheduled notification, your job is to output the final reminder message IMMEDIATELY as your final report.</context>\n<context>DO NOT attempt to use 'bash' to run system commands like 'at' or 'cron' to schedule it for later.</context>\n</time_context>\n</task_execution>\n\n<task_context_and_history_prompt>\n%s\n</task_context_and_history_prompt>", task.Name, task.Prompt)
+	// Initial user query to start the task
+	msg := fmt.Sprintf("<task_execution_request>\n<task_name>%s</task_name>\n<task_context_and_history_prompt>\n%s\n</task_context_and_history_prompt>\n</task_execution_request>", task.Name, task.Prompt)
+
+	// Fetch last execution log for this recurring task
+	pastLogs := memory.GetTaskLogs(task.ID)
+	if len(pastLogs) > 0 {
+		lastLog := pastLogs[len(pastLogs)-1]
+		msg += fmt.Sprintf("\n\n<previous_execution_result>\nThis task is recurring. Here is the final report/result from the LAST time this task ran (at %s):\n--------\n%s\n--------\n</previous_execution_result>", lastLog.CreatedAt.Format(time.RFC3339), lastLog.Output)
+	}
 
 	// Create a temporary history just for this task run
 	ctxHistory := []models.Message{
-		{Role: "system", Content: msg},
+		{Role: "user", Content: msg},
 	}
 
 	// Retrieve long-term memory for task
@@ -101,7 +108,7 @@ func executeTaskWithLoop(task models.Task) {
 
 			// Notify user in chat
 			reportMsg := fmt.Sprintf("❌ **Background Task Error: %s** (ID: %d)\n\n%s", task.Name, task.ID, errMsg)
-			memory.AddMessage("agent", reportMsg)
+			memory.AddMessage("system_notification", reportMsg)
 			if NotificationCallback != nil {
 				NotificationCallback(reportMsg)
 			}
@@ -244,13 +251,13 @@ func executeTaskWithLoop(task models.Task) {
 			}
 
 			ctxHistory = append(ctxHistory, models.Message{Role: "agent", Content: reply})
-			systemPromptPrompt := fmt.Sprintf("You just executed the action/skill '%s'.\nThe result was:\n--------\n%s\n--------\nAnalyze the result. If you need to perform MORE actions to accomplish the task, output the NEXT JSON action. If the task is fully complete, provide the final report naturally without JSON.", actionName, executionResult)
-			ctxHistory = append(ctxHistory, models.Message{Role: "user", Content: systemPromptPrompt})
+			toolResultMsg := fmt.Sprintf("<tool_output name=\"%s\">\n%s\n</tool_output>", actionName, executionResult)
+			ctxHistory = append(ctxHistory, models.Message{Role: "user", Content: toolResultMsg})
 
 		} else if strings.HasPrefix(strings.TrimSpace(jsonStr), "{") && strings.HasSuffix(strings.TrimSpace(jsonStr), "}") {
 			log.Printf("[Scheduler] JSON parse failed: %v, payload: %s", jsonErr, jsonStr)
 			ctxHistory = append(ctxHistory, models.Message{Role: "agent", Content: reply})
-			ctxHistory = append(ctxHistory, models.Message{Role: "user", Content: fmt.Sprintf("System: Your JSON failed to parse. Error: %v. Please make sure to output valid JSON. Do not write raw objects inside strings without escaping, and ensure the JSON is fully closed.", jsonErr)})
+			ctxHistory = append(ctxHistory, models.Message{Role: "user", Content: fmt.Sprintf("<system_error>\nYour JSON failed to parse. Error: %v. Please make sure to output valid JSON. Do not write raw objects inside strings without escaping, and ensure the JSON is fully closed.\n</system_error>", jsonErr)})
 			continue
 		} else {
 			// Finished execution
@@ -259,7 +266,7 @@ func executeTaskWithLoop(task models.Task) {
 
 		if i == maxIterations-1 {
 			log.Printf("[Scheduler] Hit max iterations limit. Forcing final summarization.")
-			tempCtx := append(ctxHistory, models.Message{Role: "user", Content: fmt.Sprintf("System: You have reached the maximum number of automated steps allowed (%d). Please immediately provide a final conversational summary of your progress. DO NOT output any JSON actions anymore. Remember to prefix your response with SUCCESS: or ERROR:.", maxIterations)})
+			tempCtx := append(ctxHistory, models.Message{Role: "user", Content: fmt.Sprintf("<system_warning>\nYou have reached the maximum safety limit for automated steps (%d iterations). Please immediately provide a final report of this background task's progress. DO NOT output any JSON actions anymore. Remember to prefix your response with SUCCESS: or ERROR:.\n</system_warning>", maxIterations)})
 			forcedReply, err := provider.GenerateResponse(context.Background(), cfg, tempCtx, availableSkills, nil, task.ID)
 			if err == nil && forcedReply != "" {
 				finalReply = forcedReply
@@ -298,14 +305,14 @@ func executeTaskWithLoop(task models.Task) {
 			memory.UpdateTaskStatus(task.ID, "running")
 		}
 		reportMsg := fmt.Sprintf("📝 **Background Task Completed: %s** (ID: %d)\n\n%s", task.Name, task.ID, cleanReply)
-		memory.AddMessage("agent", reportMsg)
+		memory.AddMessage("system_notification", reportMsg)
 		if NotificationCallback != nil {
 			NotificationCallback(reportMsg)
 		}
 	} else {
 		memory.UpdateTaskStatus(task.ID, "error")
 		errorMsg := fmt.Sprintf("❌ **Background Task Failed: %s** (ID: %d)\n\n%s", task.Name, task.ID, cleanReply)
-		memory.AddMessage("agent", errorMsg)
+		memory.AddMessage("system_notification", errorMsg)
 		if NotificationCallback != nil {
 			NotificationCallback(errorMsg)
 		}
