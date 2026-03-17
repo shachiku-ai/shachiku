@@ -342,7 +342,8 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 		}
 
 		var agentAction AgentAction
-		jsonErr := json.Unmarshal([]byte(jsonStr), &agentAction)
+		dec := json.NewDecoder(strings.NewReader(jsonStr))
+		jsonErr := dec.Decode(&agentAction)
 
 		if jsonErr == nil && agentAction.Action != "" {
 			executionResult := executeAgentAction(ctx, cfg, &agentAction, ctxHistory, onStep)

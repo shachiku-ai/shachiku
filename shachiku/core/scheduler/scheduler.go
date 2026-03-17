@@ -178,7 +178,9 @@ func executeTaskWithLoop(task models.Task) {
 			}
 		}
 
-		if jsonErr := json.Unmarshal([]byte(jsonStr), &agentAction); jsonErr == nil && agentAction.Action != "" {
+		dec := json.NewDecoder(strings.NewReader(jsonStr))
+		jsonErr := dec.Decode(&agentAction)
+		if jsonErr == nil && agentAction.Action != "" {
 			var executionResult string
 			actionName := agentAction.Action
 
