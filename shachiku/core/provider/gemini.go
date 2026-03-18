@@ -19,6 +19,15 @@ import (
 	googleoption "google.golang.org/api/option"
 )
 
+// sanitizeUTF8 strips any invalid UTF-8 bytes from the input string,
+// preventing protobuf serialization errors in the Gemini API.
+func sanitizeUTF8(s string) string {
+	if utf8.ValidString(s) {
+		return s
+	}
+	return strings.ToValidUTF8(s, "")
+}
+
 func generateGemini(ctx context.Context, cfg models.LLMConfig, history []models.Message, systemPrompt string, taskID uint) (string, error) {
 	apiKey := cfg.GeminiAPIKey
 	if apiKey == "" {
@@ -41,13 +50,13 @@ func generateGemini(ctx context.Context, cfg models.LLMConfig, history []models.
 
 	model := client.GenerativeModel(modelID)
 	model.SystemInstruction = &genai.Content{
-		Parts: []genai.Part{genai.Text(systemPrompt)},
+		Parts: []genai.Part{genai.Text(sanitizeUTF8(systemPrompt))},
 	}
 
 	fileRegex := regexp.MustCompile(`(?m)^@(/.*)$`)
 
 	buildParts := func(msgText string) []genai.Part {
-		content := msgText
+		content := sanitizeUTF8(msgText)
 		matches := fileRegex.FindAllStringSubmatch(content, -1)
 		var parts []genai.Part
 
