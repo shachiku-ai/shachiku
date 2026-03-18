@@ -29,28 +29,29 @@ func sanitizeUTF8(s string) string {
 }
 
 func generateGemini(ctx context.Context, cfg models.LLMConfig, history []models.Message, systemPrompt string, taskID uint) (string, error) {
-	apiKey := cfg.GeminiAPIKey
-	if apiKey == "" {
-		apiKey = os.Getenv("GEMINI_API_KEY")
+	apiKeyStr := cfg.GeminiAPIKey
+	if apiKeyStr == "" {
+		apiKeyStr = os.Getenv("GEMINI_API_KEY")
 	}
-	if apiKey == "" {
+	if apiKeyStr == "" {
 		return "Mock Gemini response. Provide GEMINI_API_KEY to see real generations.", nil
 	}
 
-	client, err := genai.NewClient(ctx, googleoption.WithAPIKey(apiKey))
-	if err != nil {
-		return "", fmt.Errorf("gemini client error: %v", err)
+	apiKeys := strings.Split(apiKeyStr, ",")
+	var validKeys []string
+	for _, k := range apiKeys {
+		k = strings.TrimSpace(k)
+		if k != "" {
+			validKeys = append(validKeys, k)
+		}
 	}
-	defer client.Close()
+	if len(validKeys) == 0 {
+		return "Mock Gemini response. Provide GEMINI_API_KEY to see real generations.", nil
+	}
 
 	modelID := cfg.Model
 	if modelID == "" {
 		modelID = "gemini-2.5-flash"
-	}
-
-	model := client.GenerativeModel(modelID)
-	model.SystemInstruction = &genai.Content{
-		Parts: []genai.Part{genai.Text(sanitizeUTF8(systemPrompt))},
 	}
 
 	fileRegex := regexp.MustCompile(`(?m)^@(/.*)$`)
@@ -132,54 +133,86 @@ func generateGemini(ctx context.Context, cfg models.LLMConfig, history []models.
 		return parts
 	}
 
-	cs := model.StartChat()
-	for i := 0; i < len(history)-1; i++ {
-		msg := history[i]
-		role := "user"
-		if msg.Role == "agent" {
-			role = "model"
+	var lastErr error
+	for _, apiKey := range validKeys {
+		client, err := genai.NewClient(ctx, googleoption.WithAPIKey(apiKey))
+		if err != nil {
+			lastErr = fmt.Errorf("gemini client error: %v", err)
+			continue
 		}
 
-		parts := buildParts(msg.Content)
-
-		cs.History = append(cs.History, &genai.Content{
-			Role:  role,
-			Parts: parts,
-		})
-	}
-
-	var lastMsg string
-	if len(history) > 0 {
-		lastMsg = history[len(history)-1].Content
-	}
-
-	lastParts := buildParts(lastMsg)
-
-	ctxReq, cancel := context.WithTimeout(ctx, 300*time.Second)
-	defer cancel()
-
-	reqMap := map[string]interface{}{
-		"Model":             modelID,
-		"SystemInstruction": systemPrompt,
-		"History":           cs.History,
-		"LastParts":         lastParts,
-	}
-	reqJSON, _ := json.MarshalIndent(reqMap, "", "  ")
-	fmt.Printf("=== [Gemini API Request] ===\n%s\n============================\n", string(reqJSON))
-
-	resp, err := cs.SendMessage(ctxReq, lastParts...)
-	if err != nil {
-		return "", fmt.Errorf("gemini api error: %v", err)
-	}
-
-	if resp.UsageMetadata != nil {
-		memory.LogTokenUsage(taskID, int(resp.UsageMetadata.PromptTokenCount), int(resp.UsageMetadata.CandidatesTokenCount))
-	}
-
-	if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
-		if txt, ok := resp.Candidates[0].Content.Parts[0].(genai.Text); ok {
-			return string(txt), nil
+		model := client.GenerativeModel(modelID)
+		model.SystemInstruction = &genai.Content{
+			Parts: []genai.Part{genai.Text(sanitizeUTF8(systemPrompt))},
 		}
+
+		cs := model.StartChat()
+		for i := 0; i < len(history)-1; i++ {
+			msg := history[i]
+			role := "user"
+			if msg.Role == "agent" {
+				role = "model"
+			}
+
+			parts := buildParts(msg.Content)
+
+			cs.History = append(cs.History, &genai.Content{
+				Role:  role,
+				Parts: parts,
+			})
+		}
+
+		var lastMsg string
+		if len(history) > 0 {
+			lastMsg = history[len(history)-1].Content
+		}
+
+		lastParts := buildParts(lastMsg)
+
+		ctxReq, cancel := context.WithTimeout(ctx, 300*time.Second)
+
+		reqMap := map[string]interface{}{
+			"Model":             modelID,
+			"SystemInstruction": systemPrompt,
+			"History":           cs.History,
+			"LastParts":         lastParts,
+		}
+		reqJSON, _ := json.MarshalIndent(reqMap, "", "  ")
+
+		keyPreview := apiKey
+		if len(keyPreview) > 4 {
+			keyPreview = keyPreview[len(keyPreview)-4:]
+		}
+		fmt.Printf("=== [Gemini API Request (Key ending in ...%s)] ===\n%s\n============================\n", keyPreview, string(reqJSON))
+
+		resp, err := cs.SendMessage(ctxReq, lastParts...)
+		cancel()
+
+		if err != nil {
+			client.Close()
+			lastErr = fmt.Errorf("gemini api error: %v", err)
+			
+			errStr := strings.ToLower(err.Error())
+			if strings.Contains(errStr, "429") || strings.Contains(errStr, "quota") || strings.Contains(errStr, "rate limit") || strings.Contains(errStr, "exhausted") {
+				fmt.Printf("[Provider] Gemini API key ...%s exhausted or rate-limited, switching to next key...\n", keyPreview)
+				continue
+			}
+			return "", lastErr
+		}
+
+		if resp.UsageMetadata != nil {
+			memory.LogTokenUsage(taskID, int(resp.UsageMetadata.PromptTokenCount), int(resp.UsageMetadata.CandidatesTokenCount))
+		}
+		
+		client.Close()
+
+		if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
+			if txt, ok := resp.Candidates[0].Content.Parts[0].(genai.Text); ok {
+				return string(txt), nil
+			}
+		}
+		return "", fmt.Errorf("empty gemini response")
 	}
-	return "", fmt.Errorf("empty gemini response")
+
+	return "", lastErr
 }

@@ -430,28 +430,51 @@ func FetchModels(providerName, apiKey string) ([]string, error) {
 
 	case "gemini":
 		ctx := context.Background()
-		client, err := genai.NewClient(ctx, googleoption.WithAPIKey(apiKey))
-		if err != nil {
-			return nil, fmt.Errorf("failed to init Gemini client: %v", err)
-		}
-		defer client.Close()
+		apiKeys := strings.Split(apiKey, ",")
+		var lastErr error
+		for _, k := range apiKeys {
+			k = strings.TrimSpace(k)
+			if k == "" {
+				continue
+			}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		iter := client.ListModels(ctx)
-		var result []string
-		for {
-			m, err := iter.Next()
-			if err == iterator.Done {
-				break
-			}
+			client, err := genai.NewClient(ctx, googleoption.WithAPIKey(k))
 			if err != nil {
-				return nil, fmt.Errorf("failed to fetch Gemini models: %v", err)
+				lastErr = fmt.Errorf("failed to init Gemini client: %v", err)
+				continue
 			}
-			name := strings.TrimPrefix(m.Name, "models/")
-			result = append(result, name)
+
+			iterCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			iter := client.ListModels(iterCtx)
+			var result []string
+			var iterErr error
+			
+			for {
+				m, err := iter.Next()
+				if err == iterator.Done {
+					break
+				}
+				if err != nil {
+					iterErr = err
+					break
+				}
+				name := strings.TrimPrefix(m.Name, "models/")
+				result = append(result, name)
+			}
+			
+			cancel()
+			client.Close()
+
+			if iterErr != nil {
+				lastErr = fmt.Errorf("failed to fetch Gemini models: %v", iterErr)
+				continue
+			}
+			return result, nil
 		}
-		return result, nil
+		if lastErr != nil {
+			return nil, lastErr
+		}
+		return nil, fmt.Errorf("no valid Gemini API keys provided")
 
 	default:
 		return nil, fmt.Errorf("unsupported provider")
