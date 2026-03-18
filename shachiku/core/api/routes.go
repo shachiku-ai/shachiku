@@ -297,13 +297,14 @@ func handleFetchModels(c *gin.Context) {
 	var req struct {
 		Provider string `json:"provider"`
 		APIKey   string `json:"api_key"`
+		Endpoint string `json:"endpoint"`
 	}
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": "Invalid request format"})
 		return
 	}
 
-	modelsList, err := provider.FetchModels(req.Provider, req.APIKey)
+	modelsList, err := provider.FetchModels(req.Provider, req.APIKey, req.Endpoint)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

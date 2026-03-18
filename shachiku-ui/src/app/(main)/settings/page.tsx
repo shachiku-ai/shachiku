@@ -20,6 +20,8 @@ export default function SettingsPage() {
         openrouter_api_key: "",
         local_api_key: "",
         local_endpoint: "",
+        openaicompatible_api_key: "",
+        openaicompatible_endpoint: "",
         telegram_bot_token: "",
         allowed_telegram_users: "",
         discord_bot_token: "",
@@ -55,6 +57,8 @@ export default function SettingsPage() {
                     openrouter_api_key: data.openrouter_api_key || "",
                     local_api_key: data.local_api_key || "",
                     local_endpoint: data.local_endpoint || "",
+                    openaicompatible_api_key: data.openaicompatible_api_key || "",
+                    openaicompatible_endpoint: data.openaicompatible_endpoint || "",
                     telegram_bot_token: data.telegram_bot_token || "",
                     allowed_telegram_users: data.allowed_telegram_users || "",
                     discord_bot_token: data.discord_bot_token || "",
@@ -76,6 +80,7 @@ export default function SettingsPage() {
         if (config.provider === "claude") return config.anthropic_api_key
         if (config.provider === "gemini") return config.gemini_api_key
         if (config.provider === "openrouter") return config.openrouter_api_key
+        if (config.provider === "openaicompatible") return config.openaicompatible_api_key
         return config.openai_api_key
     }
 
@@ -86,6 +91,8 @@ export default function SettingsPage() {
             setConfig({ ...config, gemini_api_key: val })
         } else if (config.provider === "openrouter") {
             setConfig({ ...config, openrouter_api_key: val })
+        } else if (config.provider === "openaicompatible") {
+            setConfig({ ...config, openaicompatible_api_key: val })
         } else {
             setConfig({ ...config, openai_api_key: val })
         }
@@ -93,7 +100,7 @@ export default function SettingsPage() {
 
     const handleNext = async () => {
         const apiKey = getActiveKey()
-        if (!["claudecode", "geminicli", "codexcli", "local"].includes(config.provider) && !apiKey) {
+        if (!["claudecode", "geminicli", "codexcli", "local", "openaicompatible"].includes(config.provider) && !apiKey) {
             setStatus(t("settings.apiKeyRequired", "API Key is required"))
             return
         }
@@ -107,7 +114,8 @@ export default function SettingsPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     provider: config.provider,
-                    api_key: apiKey
+                    api_key: apiKey,
+                    endpoint: config.provider === "openaicompatible" ? config.openaicompatible_endpoint : (config.provider === "local" ? config.local_endpoint : "")
                 })
             })
 
@@ -236,26 +244,41 @@ export default function SettingsPage() {
                                                     <option value="claudecode">{t("settings.claudecode", "Local (Claude Code)")}</option>
                                                     <option value="geminicli">{t("settings.geminicli", "Local (Gemini CLI)")}</option>
                                                     <option value="codexcli">{t("settings.codexcli", "Local (Codex CLI)")}</option>
-                                                    <option value="local">{t("settings.local", "Local (OpenAI Compatible)")}</option>
+                                                    <option value="openaicompatible">{t("settings.openaicompatible", "OpenAI Compatible")}</option>
+                                                    <option value="local">{t("settings.local", "Local (Ollama/Legacy)")}</option>
                                                 </select>
                                             </div>
 
                                             {!["claudecode", "geminicli", "codexcli", "local"].includes(config.provider) && (
-                                                <div className="grid gap-2">
-                                                    <label className="text-sm font-medium">{t("settings.apiKey", "API Key")}</label>
-                                                    <input
-                                                        type="password"
-                                                        placeholder={t("settings.apiKeyPlaceholder", "Enter your API Key...")}
-                                                        className="border rounded-md px-3 py-2 text-sm bg-transparent font-mono disabled:opacity-50"
-                                                        value={getActiveKey()}
-                                                        onChange={e => setActiveKey(e.target.value)}
-                                                        onKeyDown={e => {
-                                                            if (e.key === "Enter") handleNext()
-                                                        }}
-                                                    />
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {t("settings.apiKeyVerifyText", "Your key will be verified in the next step to fetch available models.")}
-                                                    </p>
+                                                <div className="grid gap-4 mt-2">
+                                                    {(config.provider === "openaicompatible") && (
+                                                        <div className="grid gap-2">
+                                                            <label className="text-sm font-medium">{t("settings.endpoint", "API Endpoint")}</label>
+                                                            <input
+                                                                type="text"
+                                                                placeholder={t("settings.endpointPlaceholder", "e.g. https://api.moonshot.cn/v1")}
+                                                                className="border rounded-md px-3 py-2 text-sm bg-transparent"
+                                                                value={config.openaicompatible_endpoint}
+                                                                onChange={e => setConfig({ ...config, openaicompatible_endpoint: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    <div className="grid gap-2">
+                                                        <label className="text-sm font-medium">{t("settings.apiKey", "API Key")}</label>
+                                                        <input
+                                                            type="password"
+                                                            placeholder={config.provider === "openaicompatible" ? t("settings.apiKeyOptionalPlaceholder", "Enter API Key (Optional)...") : t("settings.apiKeyPlaceholder", "Enter your API Key...")}
+                                                            className="border rounded-md px-3 py-2 text-sm bg-transparent font-mono disabled:opacity-50"
+                                                            value={getActiveKey()}
+                                                            onChange={e => setActiveKey(e.target.value)}
+                                                            onKeyDown={e => {
+                                                                if (e.key === "Enter") handleNext()
+                                                            }}
+                                                        />
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {t("settings.apiKeyVerifyText", "Your key will be verified in the next step to fetch available models.")}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             )}
 

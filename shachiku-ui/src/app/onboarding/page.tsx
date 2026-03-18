@@ -20,6 +20,8 @@ type ConfigState = {
     openrouter_api_key: string
     local_api_key: string
     local_endpoint: string
+    openaicompatible_api_key: string
+    openaicompatible_endpoint: string
     telegram_bot_token: string
     allowed_telegram_users: string
     discord_bot_token: string
@@ -38,7 +40,8 @@ const PROVIDERS = [
     { id: "claude", name: "Anthropic Claude" },
     { id: "gemini", name: "Google Gemini" },
     { id: "openrouter", name: "OpenRouter" },
-    { id: "local", name: "Local LLM" },
+    { id: "local", name: "Local Ollama" },
+    { id: "openaicompatible", name: "OpenAI Compatible" },
     { id: "claudecode", name: "Claude Code CLI" },
     { id: "geminicli", name: "Gemini CLI" },
     { id: "codexcli", name: "Codex CLI" },
@@ -62,6 +65,8 @@ export default function OnboardingPage() {
         openrouter_api_key: "",
         local_api_key: "",
         local_endpoint: "",
+        openaicompatible_api_key: "",
+        openaicompatible_endpoint: "",
         telegram_bot_token: "",
         allowed_telegram_users: "",
         discord_bot_token: "",
@@ -97,6 +102,7 @@ export default function OnboardingPage() {
             case "gemini": return cfg.gemini_api_key
             case "openrouter": return cfg.openrouter_api_key
             case "local": return cfg.local_api_key
+            case "openaicompatible": return cfg.openaicompatible_api_key
             default: return ""
         }
     }
@@ -108,6 +114,7 @@ export default function OnboardingPage() {
             case "gemini": setConfig(prev => ({ ...prev, gemini_api_key: value })); break
             case "openrouter": setConfig(prev => ({ ...prev, openrouter_api_key: value })); break
             case "local": setConfig(prev => ({ ...prev, local_api_key: value })); break
+            case "openaicompatible": setConfig(prev => ({ ...prev, openaicompatible_api_key: value })); break
         }
     }
 
@@ -121,7 +128,7 @@ export default function OnboardingPage() {
             return
         }
 
-        if (!apiKeyToUse && providerToUse !== "local") {
+        if (!apiKeyToUse && providerToUse !== "local" && providerToUse !== "openaicompatible") {
             setModels([])
             return
         }
@@ -131,7 +138,11 @@ export default function OnboardingPage() {
             const res = await fetch(`${API_URL}/models`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ provider: providerToUse, api_key: apiKeyToUse })
+                body: JSON.stringify({ 
+                    provider: providerToUse, 
+                    api_key: apiKeyToUse,
+                    endpoint: providerToUse === "openaicompatible" ? config.openaicompatible_endpoint : (providerToUse === "local" ? config.local_endpoint : "")
+                })
             })
             const data = await res.json()
             if (data.models && data.models.length > 0) {
@@ -159,7 +170,11 @@ export default function OnboardingPage() {
             const res = await fetch(`${API_URL}/models`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ provider: providerToUse, api_key: apiKeyToUse })
+                body: JSON.stringify({ 
+                    provider: providerToUse, 
+                    api_key: apiKeyToUse,
+                    endpoint: providerToUse === "openaicompatible" ? config.openaicompatible_endpoint : (providerToUse === "local" ? config.local_endpoint : "")
+                })
             })
             const data = await res.json()
             if (res.ok && data.models && data.models.length > 0) {
@@ -345,6 +360,17 @@ export default function OnboardingPage() {
                                                     placeholder="http://localhost:11434/v1"
                                                     value={config.local_endpoint}
                                                     onChange={(e) => setConfig(prev => ({ ...prev, local_endpoint: e.target.value }))}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {config.provider === "openaicompatible" && (
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-medium">{t("onboarding.endpoint", "API Endpoint")}</label>
+                                                <Input
+                                                    placeholder="https://api.your-provider.com/v1"
+                                                    value={config.openaicompatible_endpoint}
+                                                    onChange={(e) => setConfig(prev => ({ ...prev, openaicompatible_endpoint: e.target.value }))}
                                                 />
                                             </div>
                                         )}

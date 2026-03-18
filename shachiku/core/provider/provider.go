@@ -34,6 +34,8 @@ func resolveProvider(cfg models.LLMConfig) string {
 			provider = "gemini"
 		} else if os.Getenv("OPENROUTER_API_KEY") != "" || cfg.OpenRouterAPIKey != "" {
 			provider = "openrouter"
+		} else if os.Getenv("OPENAICOMPATIBLE_API_KEY") != "" || cfg.OpenAICompatibleAPIKey != "" {
+			provider = "openaicompatible"
 		} else {
 			provider = "openai" // default
 		}
@@ -68,6 +70,8 @@ func ExtractFacts(ctx context.Context, cfg models.LLMConfig, userInput string) (
 		resp, err = generateGeminiCLI(ctx, cfg, history, systemPrompt, 0)
 	case "codexcli":
 		resp, err = generateCodexCLI(ctx, cfg, history, systemPrompt, 0)
+	case "openaicompatible":
+		resp, err = generateOpenAICompatible(ctx, cfg, history, systemPrompt, 0)
 	default:
 		resp, err = generateOpenAI(ctx, cfg, history, systemPrompt, 0)
 	}
@@ -346,13 +350,15 @@ func GenerateResponse(ctx context.Context, cfg models.LLMConfig, history []model
 		return generateGeminiCLI(ctx, cfg, history, systemPrompt, taskID)
 	case "codexcli":
 		return generateCodexCLI(ctx, cfg, history, systemPrompt, taskID)
+	case "openaicompatible":
+		return generateOpenAICompatible(ctx, cfg, history, systemPrompt, taskID)
 	default:
 		return generateOpenAI(ctx, cfg, history, systemPrompt, taskID)
 	}
 }
 
 // FetchModels validates the corresponding API key and returns a list of available models.
-func FetchModels(providerName, apiKey string) ([]string, error) {
+func FetchModels(providerName, apiKey, endpoint string) ([]string, error) {
 	if providerName == "claudecode" || providerName == "geminicli" || providerName == "codexcli" {
 		var exeName string
 		switch providerName {
@@ -376,24 +382,33 @@ func FetchModels(providerName, apiKey string) ([]string, error) {
 	}
 
 	switch providerName {
-	case "openai", "local", "openrouter":
-		if providerName == "local" && apiKey == "" {
+	case "openai", "local", "openrouter", "openaicompatible":
+		if (providerName == "local" || providerName == "openaicompatible") && apiKey == "" {
 			apiKey = "dummy"
 		}
 		config := openai.DefaultConfig(apiKey)
 		if providerName == "openrouter" {
 			config.BaseURL = "https://openrouter.ai/api/v1"
+		} else if providerName == "openaicompatible" {
+			if endpoint != "" {
+				config.BaseURL = endpoint
+			}
 		} else if baseURL := os.Getenv("OPENAI_BASE_URL"); baseURL != "" {
 			config.BaseURL = baseURL
 		} else if providerName == "local" {
-			config.BaseURL = "http://localhost:11434/v1"
+			if endpoint != "" {
+				config.BaseURL = endpoint
+			} else {
+				config.BaseURL = "http://localhost:11434/v1"
+			}
 		}
+
 		client := openai.NewClientWithConfig(config)
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		modelsList, err := client.ListModels(ctx)
 		if err != nil {
-			if providerName == "local" {
+			if providerName == "local" || providerName == "openaicompatible" {
 				return []string{"local-model"}, nil
 			}
 			return nil, fmt.Errorf("failed to fetch OpenAI models: %v", err)
@@ -402,7 +417,7 @@ func FetchModels(providerName, apiKey string) ([]string, error) {
 		for _, m := range modelsList.Models {
 			result = append(result, m.ID)
 		}
-		if len(result) == 0 && providerName == "local" {
+		if len(result) == 0 && (providerName == "local" || providerName == "openaicompatible") {
 			return []string{"local-model"}, nil
 		}
 		return result, nil
