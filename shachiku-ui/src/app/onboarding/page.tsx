@@ -305,7 +305,7 @@ export default function OnboardingPage() {
                     ))}
                 </div>
 
-                <Card className="border-0 shadow-lg ring-1 ring-border min-h-[400px]">
+                <Card className="border-0 shadow-lg ring-1 ring-border min-h-[400px] flex flex-col">
                     {!isDataLoaded ? (
                         <div className="flex items-center justify-center p-20 h-full min-h-[400px]">
                             <Loader2Icon className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -318,7 +318,7 @@ export default function OnboardingPage() {
                                         <CardTitle>{t("onboarding.step1Title", "1. Configure Intelligence Provider")}</CardTitle>
                                         <CardDescription>{t("onboarding.step1Desc", "Select the underlying LLM engine for your agent")}</CardDescription>
                                     </CardHeader>
-                                    <CardContent className="space-y-6">
+                                    <CardContent className="space-y-6 flex-1">
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium">{t("onboarding.provider", "Provider")}</label>
                                             <select
@@ -330,7 +330,7 @@ export default function OnboardingPage() {
                                                 }}
                                             >
                                                 {PROVIDERS.map(p => (
-                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                    <option key={p.id} value={p.id}>{t(`settings.${p.id}`, p.name)}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -408,7 +408,7 @@ export default function OnboardingPage() {
                                         <CardTitle>{t("onboarding.step2Title", "2. Define Identity")}</CardTitle>
                                         <CardDescription>{t("onboarding.step2Desc", "Give your agent a unique name, personality, and role.")}</CardDescription>
                                     </CardHeader>
-                                    <CardContent className="space-y-6">
+                                    <CardContent className="space-y-6 flex-1">
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium">{t("onboarding.agentName", "Agent Name")}</label>
                                             <Input
@@ -464,9 +464,9 @@ export default function OnboardingPage() {
                                         <CardTitle>{t("onboarding.step3Title", "3. The Agent's Soul")}</CardTitle>
                                         <CardDescription>{t("onboarding.step3Desc", "We've generated a comprehensive system prompt based on your inputs. You can modify it if needed.")}</CardDescription>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="flex-1 flex flex-col">
                                         <textarea
-                                            className="flex w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background font-mono min-h-[300px]"
+                                            className="flex-1 flex w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background font-mono min-h-[300px]"
                                             value={config.ai_soul}
                                             onChange={(e) => setConfig(prev => ({ ...prev, ai_soul: e.target.value }))}
                                         />
@@ -484,7 +484,7 @@ export default function OnboardingPage() {
                                         <CardTitle>{t("onboarding.step4Title", "4. Extension: External Channel")}</CardTitle>
                                         <CardDescription>{t("onboarding.step4Desc", "Optionally bind your agent to an external channel like Telegram or Discord for mobile chat access.")}</CardDescription>
                                     </CardHeader>
-                                    <CardContent className="space-y-6">
+                                    <CardContent className="space-y-6 flex-1">
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium">{t("onboarding.channelProvider", "Channel Provider")}</label>
                                             <select
