@@ -142,12 +142,12 @@ export default function ChatPage() {
 
                     {hasTextBubble && (
                       <div
-                        className={`rounded-lg px-4 py-2 w-max max-w-full ${msg.Role === "user"
-                          ? "bg-primary text-primary-foreground"
+                        className={msg.Role === "user"
+                          ? "rounded-lg px-4 py-2 w-max max-w-full bg-primary text-primary-foreground"
                           : msg.Role === "system"
-                            ? "bg-destructive/10 text-destructive text-sm"
-                            : "bg-muted"
-                          }`}
+                            ? "rounded-lg px-4 py-2 w-max max-w-full bg-destructive/10 text-destructive text-sm"
+                            : "w-full"
+                        }
                       >
                         {msg.Role === "user" ? (
                           <div className="whitespace-pre-wrap break-words">
@@ -163,10 +163,14 @@ export default function ChatPage() {
                                   ) : (
                                     <div className="text-sm">
                                       {msg.Action ? (
-                                        <span className="inline-flex items-center text-xs font-semibold text-primary transition-colors">
-                                          <WrenchIcon className="w-3 h-3 mr-1.5 opacity-70 animate-pulse" />
-                                          {msg.Action}
-                                        </span>
+                                        <div className="border rounded-lg bg-background shadow-sm w-max max-w-full">
+                                          <div className="font-medium text-xs px-3 py-2 text-muted-foreground select-none flex items-center gap-1 transition-colors">
+                                            <WrenchIcon className="h-3 w-3 shrink-0 animate-pulse" />
+                                            <span className="truncate max-w-[400px]">
+                                              {msg.Action}
+                                            </span>
+                                          </div>
+                                        </div>
                                       ) : (
                                         <details className="group border rounded-lg bg-background shadow-sm w-max max-w-full">
                                           <summary className="cursor-pointer font-medium text-xs px-3 py-2 text-muted-foreground hover:bg-muted/50 select-none list-none flex items-center gap-1 transition-colors">
