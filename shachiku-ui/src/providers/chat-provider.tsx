@@ -8,6 +8,7 @@ export type Message = {
     Role: string
     Content: string
     Thought?: string
+    Actions?: string[]
 }
 
 type ChatContextType = {
@@ -108,6 +109,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             let buffer = ""
             let currentAgentMsg = ""
             let currentAgentThought = ""
+            let currentAgentActions: string[] = []
 
             while (!done) {
                 const { value, done: readerDone } = await reader.read()
@@ -128,14 +130,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                                     currentAgentThought += (currentAgentThought ? "\n\n" : "") + parsed.content
                                     setMessages((prev) => {
                                         const newMsgs = [...prev]
-                                        newMsgs[newMsgs.length - 1] = { Role: "agent", Content: currentAgentMsg, Thought: currentAgentThought }
+                                        newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], Role: "agent", Content: currentAgentMsg, Thought: currentAgentThought }
+                                        return newMsgs
+                                    })
+                                } else if (parsed.type === "action") {
+                                    currentAgentActions = [...currentAgentActions, parsed.content]
+                                    setMessages((prev) => {
+                                        const newMsgs = [...prev]
+                                        newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], Role: "agent", Content: currentAgentMsg, Actions: currentAgentActions }
                                         return newMsgs
                                     })
                                 } else if (parsed.type === "result") {
                                     currentAgentMsg = parsed.content
                                     setMessages((prev) => {
                                         const newMsgs = [...prev]
-                                        newMsgs[newMsgs.length - 1] = { Role: "agent", Content: currentAgentMsg, Thought: currentAgentThought }
+                                        newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], Role: "agent", Content: currentAgentMsg }
                                         return newMsgs
                                     })
                                 } else if (parsed.error) {

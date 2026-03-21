@@ -6,6 +6,7 @@ type Message struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
 	Role      string    `json:"Role"`
 	Content   string    `json:"Content"`
+	Execution string    `json:"Execution"`
 	CreatedAt time.Time `json:"CreatedAt"`
 }
 

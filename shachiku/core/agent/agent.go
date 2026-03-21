@@ -162,21 +162,19 @@ func formatSkillArgs(actionName string, action *AgentAction) string {
 }
 
 // executeAgentAction executes the corresponding tool/task business logic.
-func executeAgentAction(ctx context.Context, cfg models.LLMConfig, action *AgentAction, ctxHistory []models.Message, onStep func(stepText string)) string {
+func executeAgentAction(ctx context.Context, cfg models.LLMConfig, action *AgentAction, ctxHistory []models.Message, onAction func(actionText string)) string {
 	actionName := action.Action
 	if actionName == "execute_skill" {
 		actionName = action.Name
 	}
 
-	if onStep != nil {
-		onStep(fmt.Sprintf("Executing: %s...", actionName))
+	if onAction != nil {
+		onAction(actionName)
 	}
 
 	switch actionName {
 	case "create_skill":
-		if onStep != nil {
-			onStep(fmt.Sprintf("Brainstorming skill '%s' structure and logic...", action.Name))
-		}
+
 		instructions, _ := provider.GenerateSkillInstructions(ctx, cfg, action.Name, action.Description)
 		if err := skills.CreateSkill(action.Name, action.Description, instructions); err == nil {
 			return fmt.Sprintf("Skill '%s' created successfully.", action.Name)
@@ -185,9 +183,7 @@ func executeAgentAction(ctx context.Context, cfg models.LLMConfig, action *Agent
 		}
 
 	case "execute_task":
-		if onStep != nil {
-			onStep(fmt.Sprintf("Summarizing task context for '%s'...", action.Name))
-		}
+
 		var recentMessages string
 		for _, hm := range ctxHistory {
 			if hm.Role == "user" || (hm.Role == "agent" && !strings.HasPrefix(hm.Content, "{")) {
@@ -254,9 +250,6 @@ func executeAgentAction(ctx context.Context, cfg models.LLMConfig, action *Agent
 			return "Error: missing query argument"
 		}
 
-		if onStep != nil {
-			onStep(fmt.Sprintf("Searching memory for '%s'...", query))
-		}
 
 		emb, err := provider.GenerateEmbedding(cfg, query)
 		if err != nil {
@@ -276,7 +269,7 @@ func executeAgentAction(ctx context.Context, cfg models.LLMConfig, action *Agent
 }
 
 // ProcessMessage runs the automated multi-step LLM reasoning loop.
-func ProcessMessage(ctx context.Context, message string, onStep func(stepText string)) (string, error) {
+func ProcessMessage(ctx context.Context, message string, onStep func(stepText string), onAction func(actionText string)) (string, error) {
 	cfg := memory.GetLLMConfig()
 	memoryContext := fetchMemoryContext(cfg, message)
 
@@ -346,11 +339,12 @@ func ProcessMessage(ctx context.Context, message string, onStep func(stepText st
 		jsonErr := dec.Decode(&agentAction)
 
 		if jsonErr == nil && agentAction.Action != "" {
-			executionResult := executeAgentAction(ctx, cfg, &agentAction, ctxHistory, onStep)
+			executionResult := executeAgentAction(ctx, cfg, &agentAction, ctxHistory, onAction)
 
 			if f != nil {
 				f.WriteString(fmt.Sprintf("**⚙️ Tool Execution (%s):**\n```\n%s\n```\n\n", agentAction.Action, executionResult))
 			}
+
 
 			ctxHistory = append(ctxHistory, models.Message{Role: "agent", Content: reply})
 

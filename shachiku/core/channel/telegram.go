@@ -179,6 +179,13 @@ func (m *TelegramModule) handleMessage(msg *tgbotapi.Message) {
 			m.bot.Send(edit)
 			lastStepTime = time.Now()
 		}
+	}, func(action string) {
+		if err == nil && time.Since(lastStepTime) > 3*time.Second && action != "" {
+			edit := tgbotapi.NewEditMessageText(chatID, thinkMsg.MessageID, "⏳ <i>"+MarkdownToTelegramHTML(action)+"</i>")
+			edit.ParseMode = tgbotapi.ModeHTML
+			m.bot.Send(edit)
+			lastStepTime = time.Now()
+		}
 	})
 
 	if agentErr != nil {

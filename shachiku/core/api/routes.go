@@ -265,6 +265,8 @@ func handleChat(c *gin.Context) {
 
 	finalReply, err := agent.ProcessMessage(c.Request.Context(), req.Message, func(step string) {
 		sendSSE("step", step)
+	}, func(action string) {
+		sendSSE("action", action)
 	})
 
 	if err != nil {

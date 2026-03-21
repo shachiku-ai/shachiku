@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
-import { SendIcon, BotIcon, UserIcon, Loader2Icon, ChevronRightIcon, BrushCleaning, FileIcon } from "lucide-react"
+import { SendIcon, BotIcon, Loader2Icon, ChevronRightIcon, BrushCleaning, FileIcon, WrenchIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -117,11 +117,7 @@ export default function ChatPage() {
                   key={idx}
                   className={`flex gap-3 ${msg.Role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  {msg.Role !== "user" && (
-                    <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-md border bg-background shadow-sm">
-                      {msg.Role === "agent" ? <BotIcon className="h-4 w-4" /> : <BotIcon className="h-4 w-4 text-destructive" />}
-                    </div>
-                  )}
+
 
                   <div className={`flex flex-col gap-2 max-w-[80%] ${msg.Role === "user" ? "items-end" : "items-start"}`}>
                     {msg.Thought && (
@@ -130,10 +126,21 @@ export default function ChatPage() {
                           <ChevronRightIcon className="h-3 w-3 transition-transform group-open:rotate-90" />
                           {t("chat.thoughtProcess", "Thought Process")}
                         </summary>
-                        <div className="p-3 pt-2 text-xs text-foreground border-t bg-muted/10 whitespace-pre-wrap max-h-64 overflow-y-auto font-sans leading-relaxed">
-                          {msg.Thought}
+                        <div className="p-3 pt-2 text-xs text-foreground border-t bg-muted/10 max-h-64 overflow-y-auto font-sans leading-relaxed prose prose-sm dark:prose-invert max-w-none break-words prose-pre:bg-background prose-pre:border">
+                          {renderMessageText(msg.Thought, false)}
                         </div>
                       </details>
+                    )}
+
+                    {msg.Actions && msg.Actions.length > 0 && (
+                      <div className={`flex flex-wrap gap-2 max-w-[80%] ${msg.Role === "user" ? "self-end justify-end" : "self-start justify-start"}`}>
+                        {msg.Actions.map((actionName, i) => (
+                          <div key={i} className="inline-flex items-center rounded-sm border px-2 py-1 text-xs font-semibold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground">
+                            <WrenchIcon className="w-3 h-3 mr-1.5 opacity-70" />
+                            {actionName}
+                          </div>
+                        ))}
+                      </div>
                     )}
 
                     {files.length > 0 && (
@@ -191,11 +198,7 @@ export default function ChatPage() {
                       </div>
                     )}
                   </div>
-                  {msg.Role === "user" && (
-                    <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-md border bg-primary text-primary-foreground shadow-sm">
-                      <UserIcon className="h-4 w-4" />
-                    </div>
-                  )}
+
                 </div>
               )
             })

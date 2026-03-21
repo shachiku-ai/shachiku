@@ -130,6 +130,11 @@ func (m *DiscordModule) messageCreate(s *discordgo.Session, msg *discordgo.Messa
 			s.ChannelMessageEdit(msg.ChannelID, thinkMsg.ID, "⏳ *"+step+"*")
 			lastStepTime = time.Now()
 		}
+	}, func(action string) {
+		if err == nil && time.Since(lastStepTime) > 3*time.Second && action != "" {
+			s.ChannelMessageEdit(msg.ChannelID, thinkMsg.ID, "⏳ *"+action+"*")
+			lastStepTime = time.Now()
+		}
 	})
 
 	if agentErr != nil {
