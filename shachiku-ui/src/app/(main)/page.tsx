@@ -120,28 +120,8 @@ export default function ChatPage() {
 
 
                   <div className={`flex flex-col gap-2 max-w-[80%] ${msg.Role === "user" ? "items-end" : "items-start"}`}>
-                    {msg.Thought && (
-                      <details className={`group border rounded-lg bg-background shadow-sm w-max max-w-full ${msg.Role === "user" ? "self-end" : "self-start"}`}>
-                        <summary className="cursor-pointer font-medium text-xs px-3 py-2 text-muted-foreground hover:bg-muted/50 select-none list-none flex items-center gap-1 transition-colors">
-                          <ChevronRightIcon className="h-3 w-3 transition-transform group-open:rotate-90" />
-                          {t("chat.thoughtProcess", "Thought Process")}
-                        </summary>
-                        <div className="p-3 pt-2 text-xs text-foreground border-t bg-muted/10 max-h-64 overflow-y-auto font-sans leading-relaxed prose prose-sm dark:prose-invert max-w-none break-words prose-pre:bg-background prose-pre:border">
-                          {renderMessageText(msg.Thought, false)}
-                        </div>
-                      </details>
-                    )}
 
-                    {msg.Actions && msg.Actions.length > 0 && (
-                      <div className={`flex flex-wrap gap-2 max-w-[80%] ${msg.Role === "user" ? "self-end justify-end" : "self-start justify-start"}`}>
-                        {msg.Actions.map((actionName, i) => (
-                          <div key={i} className="inline-flex items-center rounded-sm border px-2 py-1 text-xs font-semibold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground">
-                            <WrenchIcon className="w-3 h-3 mr-1.5 opacity-70" />
-                            {actionName}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+
 
                     {files.length > 0 && (
                       <div className="flex flex-col gap-2 w-full">
@@ -177,14 +157,32 @@ export default function ChatPage() {
                           <div className="prose prose-sm max-w-none break-words dark:prose-invert">
                             {loading && idx === messages.length - 1 ? (
                               <div className="flex items-start gap-2 text-muted-foreground">
-                                {(!text) && (
-                                  <Loader2Icon className="h-4 w-4 animate-spin mt-0.5 shrink-0" />
-                                )}
                                 <div className="flex-1 min-w-0">
                                   {text ? (
                                     renderMessageText(text, false)
                                   ) : (
-                                    <span className="italic text-sm">{msg.Thought ? "" : t("chat.thinking", "Thinking...")}</span>
+                                    <div className="text-sm">
+                                      {msg.Action ? (
+                                        <span className="inline-flex items-center text-xs font-semibold text-primary transition-colors">
+                                          <WrenchIcon className="w-3 h-3 mr-1.5 opacity-70 animate-pulse" />
+                                          {msg.Action}
+                                        </span>
+                                      ) : (
+                                        <details className="group border rounded-lg bg-background shadow-sm w-max max-w-full">
+                                          <summary className="cursor-pointer font-medium text-xs px-3 py-2 text-muted-foreground hover:bg-muted/50 select-none list-none flex items-center gap-1 transition-colors">
+                                            <ChevronRightIcon className="h-3 w-3 transition-transform group-open:rotate-90 shrink-0" />
+                                            <span className="truncate max-w-[400px]">
+                                              {msg.Thought ? msg.Thought.split('\n').filter((l: string) => l.trim().length > 0).pop() || t("chat.thinking", "Thinking...") : t("chat.thinking", "Thinking...")}
+                                            </span>
+                                          </summary>
+                                          {msg.Thought && (
+                                            <div className="p-3 pt-2 text-xs text-foreground border-t bg-muted/10 max-h-64 overflow-y-auto font-sans leading-relaxed prose prose-sm dark:prose-invert max-w-none break-words prose-pre:bg-background prose-pre:border">
+                                              {renderMessageText(msg.Thought, false)}
+                                            </div>
+                                          )}
+                                        </details>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                               </div>
