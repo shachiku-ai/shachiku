@@ -79,7 +79,7 @@
     "chat.placeholder": "エージェントへのメッセージを入力...",
     "chat.stopped": "会話が停止しました。",
     "chat.failed": "API への接続に失敗しました：",
-    "chat.thinking": "考え中...",
+    "chat.thinking": "リクエストを分析中...",
     "memory.title": "メモリログ",
     "memory.desc": "エージェントのメモリストレージ、セマンティック検索インデックス、およびコンテキスト検索を監視します。",
     "memory.refresh": "更新",

@@ -79,7 +79,7 @@
     "chat.placeholder": "向代理输入消息...",
     "chat.stopped": "对话已停止。",
     "chat.failed": "无法连接至 API：",
-    "chat.thinking": "思考中...",
+    "chat.thinking": "正在分析请求...",
     "memory.title": "记忆日志",
     "memory.desc": "查看代理的记忆存储、语义搜索索引以及上下文检索记录。",
     "memory.refresh": "刷新",

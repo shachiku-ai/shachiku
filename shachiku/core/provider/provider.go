@@ -257,7 +257,8 @@ func BuildSystemPrompt(cfg models.LLMConfig, availableSkills []skills.Skill, mem
 	systemPrompt := fmt.Sprintf("You are a highly capable AI agent with access to skills, memory, and an advanced Task Scheduling system.\n"+
 		"The CURRENT DATE AND TIME is: %s. Use this as your reference for ANY relative dates, years, or times (e.g. knowing what year it currently is, or adjusting local timezones correctly).\n"+
 		"HOST OPERATING SYSTEM: %s. Please generate shell commands and scripts suitable for this OS.\n"+
-		"For EVERY user request, you should first THINK about how to solve it and what skills to use. Put your thought process inside `<think>...</think>` tags, then output the JSON action.\n", time.Now().Format(time.RFC3339), runtime.GOOS)
+		"For EVERY user request, you should first THINK about how to solve it and what skills to use. Put your thought process inside `<think>...</think>` tags, then output the JSON action.\n"+
+		"CRITICAL: The VERY FIRST LINE inside your `<think>` tags MUST ALWAYS be a concise, one-sentence description of the problem or sub-task you are currently thinking about. Do not output anything else before this line.\n", time.Now().Format(time.RFC3339), runtime.GOOS)
 
 	if cfg.AISoul != "" {
 		systemPrompt += fmt.Sprintf("\n<identity>\n<name>%s</name>\n<role>%s</role>\n<personality>%s</personality>\n<instructions>\n%s\n</instructions>\n</identity>\n\n", cfg.AIName, cfg.AIRole, cfg.AIPersonality, cfg.AISoul)

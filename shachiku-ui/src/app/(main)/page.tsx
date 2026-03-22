@@ -162,21 +162,22 @@ export default function ChatPage() {
                                     renderMessageText(text, false)
                                   ) : (
                                     <div className="text-sm">
-                                      {msg.Action ? (
-                                        <div className="border rounded-lg bg-background shadow-sm w-max max-w-full">
-                                          <div className="font-medium text-xs px-3 py-2 text-muted-foreground select-none flex items-center gap-1 transition-colors">
-                                            <WrenchIcon className="h-3 w-3 shrink-0 animate-pulse" />
-                                            <span className="truncate max-w-[400px]">
-                                              {msg.Action}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      ) : (
+                                      <div className="flex flex-col gap-2">
                                         <details className="group border rounded-lg bg-background shadow-sm w-max max-w-full">
                                           <summary className="cursor-pointer font-medium text-xs px-3 py-2 text-muted-foreground hover:bg-muted/50 select-none list-none flex items-center gap-1 transition-colors">
                                             <ChevronRightIcon className="h-3 w-3 transition-transform group-open:rotate-90 shrink-0" />
                                             <span className="truncate max-w-[400px]">
-                                              {msg.Thought ? msg.Thought.split('\n').filter((l: string) => l.trim().length > 0).pop() || t("chat.thinking", "Thinking...") : t("chat.thinking", "Thinking...")}
+                                              {(() => {
+                                                if (!msg.Thought) return t("chat.thinking", "Analyzing request...");
+                                                const steps = msg.Thought.split('\n\n');
+                                                const latestStep = steps[steps.length - 1] || "";
+                                                const lines = latestStep.split('\n').filter((l: string) => l.trim().length > 0);
+                                                let overview = lines[0] || t("chat.thinking", "Analyzing request...");
+                                                if (overview.startsWith("Thinking: ")) {
+                                                  overview = overview.substring(10).trim();
+                                                }
+                                                return overview || t("chat.thinking", "Analyzing request...");
+                                              })()}
                                             </span>
                                           </summary>
                                           {msg.Thought && (
@@ -185,7 +186,18 @@ export default function ChatPage() {
                                             </div>
                                           )}
                                         </details>
-                                      )}
+                                        
+                                        {msg.Action && (
+                                          <div className="border rounded-lg bg-background shadow-sm w-max max-w-full">
+                                            <div className="font-medium text-xs px-3 py-2 text-muted-foreground select-none flex items-center gap-1 transition-colors">
+                                              <WrenchIcon className="h-3 w-3 shrink-0 animate-pulse" />
+                                              <span className="truncate max-w-[400px]">
+                                                {msg.Action}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   )}
                                 </div>
