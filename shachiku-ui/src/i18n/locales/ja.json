@@ -80,6 +80,7 @@
     "chat.stopped": "会話が停止しました。",
     "chat.failed": "API への接続に失敗しました：",
     "chat.thinking": "リクエストを分析中...",
+    "chat.uploading": "ファイルをアップロード中...",
     "memory.title": "メモリログ",
     "memory.desc": "エージェントのメモリストレージ、セマンティック検索インデックス、およびコンテキスト検索を監視します。",
     "memory.refresh": "更新",

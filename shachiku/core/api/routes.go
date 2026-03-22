@@ -196,6 +196,8 @@ func SetupRoutes() *gin.Engine {
 		api.DELETE("/tasks/:id", handleDeleteTask)
 
 		api.GET("/tokens/dashboard", handleGetTokenDashboard)
+		
+		api.POST("/upload", handleUpload)
 	}
 
 	// Serve the embedded Next.js UI
@@ -424,3 +426,37 @@ func handleGenerateSoul(c *gin.Context) {
 
 	c.JSON(200, gin.H{"soul": soul})
 }
+
+func handleUpload(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		return
+	}
+
+	uploadDir := filepath.Join(config.GetDataDir(), "uploads")
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
+		return
+	}
+
+	// Generate a unique filename to avoid collisions
+	filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), file.Filename)
+	dst := filepath.Join(uploadDir, filename)
+
+	if err := c.SaveUploadedFile(file, dst); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+		return
+	}
+
+	absPath, err := filepath.Abs(dst)
+	if err != nil {
+		absPath = dst
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"path": absPath,
+		"filename": file.Filename,
+	})
+}
+

@@ -80,6 +80,7 @@
     "chat.stopped": "Conversation stopped.",
     "chat.failed": "Failed to connect to API: ",
     "chat.thinking": "Analyzing request...",
+    "chat.uploading": "Uploading file...",
     "memory.title": "Memory Logs",
     "memory.desc": "Monitor your agent's memory storage, semantic search indexing, and context retrievals.",
     "memory.refresh": "Refresh",

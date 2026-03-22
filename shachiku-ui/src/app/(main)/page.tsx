@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
-import { SendIcon, BotIcon, Loader2Icon, ChevronRightIcon, BrushCleaning, FileIcon, WrenchIcon } from "lucide-react"
+import { SendIcon, BotIcon, Loader2Icon, ChevronRightIcon, BrushCleaning, FileIcon, WrenchIcon, XIcon, PaperclipIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -12,6 +12,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeRaw from "rehype-raw"
 import { useChat } from "@/providers/chat-provider"
+import { API_URL } from "@/lib/api"
 
 export default function ChatPage() {
   const { t } = useTranslation()
@@ -21,7 +22,10 @@ export default function ChatPage() {
     handleSend: handleSendContext, executeClearShortMemory
   } = useChat()
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [attachments, setAttachments] = useState<string[]>([])
+  const [isUploading, setIsUploading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -38,12 +42,68 @@ export default function ChatPage() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || loading) return
+    if ((!input.trim() && attachments.length === 0) || loading) return
 
-    const msg = input.trim();
+    let finalMsg = input.trim();
+    if (attachments.length > 0) {
+      if (finalMsg) finalMsg += "\n";
+      finalMsg += attachments.map(p => `@${p}`).join("\n");
+    }
+
     setInput("")
+    setAttachments([])
 
-    await handleSendContext(e, msg)
+    await handleSendContext(e, finalMsg)
+  }
+
+  const uploadFile = async (file: File) => {
+    setIsUploading(true)
+    const formData = new FormData()
+    formData.append("file", file)
+
+    try {
+      const res = await fetch(`${API_URL}/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json()
+        setAttachments(prev => [...prev, data.path])
+      }
+    } catch (err) {
+      console.error("Failed to upload file:", err)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    let hasFile = false;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === "file") {
+        hasFile = true;
+        const file = item.getAsFile();
+        if (file) {
+          uploadFile(file);
+        }
+      }
+    }
+    
+    // We don't prevent default, so text can still be pasted.
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    for (let i = 0; i < files.length; i++) {
+        uploadFile(files[i]);
+    }
+    // reset input
+    e.target.value = "";
   }
 
   const renderMessageText = (content: string, isUser: boolean) => {
@@ -238,18 +298,63 @@ export default function ChatPage() {
               </Button>
             </div>
           )}
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 w-full mb-1">
+              {attachments.map((path, i) => {
+                const filename = path.split("/").pop() || path;
+                return (
+                  <div key={i} className="flex items-center gap-2 bg-muted/60 px-3 py-1.5 rounded-lg border text-sm max-w-full shadow-sm">
+                    <FileIcon className="h-4 w-4 text-primary shrink-0" />
+                    <span className="truncate max-w-[200px]" title={filename}>{filename}</span>
+                    <button
+                      type="button"
+                      onClick={() => setAttachments(attachments.filter((_, index) => index !== i))}
+                      className="text-muted-foreground hover:text-foreground shrink-0 ml-1 rounded-full p-0.5 hover:bg-background transition-colors"
+                    >
+                      <XIcon className="h-3 w-3" />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {isUploading && (
+            <div className="flex items-center gap-2 text-xs text-primary animate-pulse mb-2 px-1 font-medium">
+              <Loader2Icon className="h-3 w-3 animate-spin" />
+              {t("chat.uploading", "Uploading file...")}
+            </div>
+          )}
           <form
             onSubmit={handleSend}
             className="flex w-full items-center space-x-2"
           >
+            <input 
+              type="file" 
+              multiple 
+              className="hidden" 
+              ref={fileInputRef} 
+              onChange={handleFileSelect} 
+            />
+            <Button 
+              type="button" 
+              variant="outline"
+              size="icon" 
+              className="shrink-0"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading || fetching || isUploading}
+            >
+              <PaperclipIcon className="h-4 w-4" />
+              <span className="sr-only">Attach</span>
+            </Button>
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={t("chat.placeholder", "Type your message to the agent...")}
+              onPaste={handlePaste}
+              placeholder={t("chat.placeholder", "Type your message or paste a file...")}
               className="flex-1"
               disabled={loading || fetching}
             />
-            <Button type="submit" size="icon" disabled={!input.trim() || loading || fetching}>
+            <Button type="submit" size="icon" disabled={(input.trim() === "" && attachments.length === 0) || loading || fetching || isUploading}>
               <SendIcon className="h-4 w-4" />
               <span className="sr-only">Send</span>
             </Button>
