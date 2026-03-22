@@ -13,7 +13,17 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import {
+    ChartConfig,
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+    ChartLegend,
+    ChartLegendContent,
+} from "@/components/ui/chart"
+
+
 
 type DailyTokenUsage = {
     date: string
@@ -37,6 +47,17 @@ export default function TokenDashboardPage() {
     const { t } = useTranslation()
     const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
     const [loading, setLoading] = useState(true)
+
+    const chartConfig = {
+        input_tokens: {
+            label: t("dashboard.inputTokensShort", "Input Tokens"),
+            color: "#96C3FD",
+        },
+        output_tokens: {
+            label: t("dashboard.outputTokensShort", "Output Tokens"),
+            color: "#4D7CFF",
+        },
+    } satisfies ChartConfig
 
     useEffect(() => {
         fetch(`${API_URL}/tokens/dashboard`)
@@ -113,29 +134,31 @@ export default function TokenDashboardPage() {
                         {/* Chart */}
                         <div className="rounded-xl border bg-card text-card-foreground shadow flex flex-col pt-6">
                             <h3 className="font-semibold leading-none tracking-tight px-6 mb-4">{t("dashboard.chartTitle", "Daily Token Usage (Last 30 Days)")}</h3>
-                            <div className="h-[350px] w-full px-2">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart
-                                        data={metrics.daily_usage}
-                                        margin={{
-                                            top: 5,
-                                            right: 30,
-                                            left: 20,
-                                            bottom: 5,
-                                        }}
-                                    >
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                                        <XAxis dataKey="date" tick={{ fontSize: 12 }} tickMargin={10} axisLine={false} tickLine={false} />
-                                        <YAxis tick={{ fontSize: 12 }} tickFormatter={(val) => val >= 1000 ? (val / 1000).toFixed(1) + 'k' : val} axisLine={false} tickLine={false} />
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
-                                            cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                            <div className="h-[350px] w-full px-6 pb-6 pt-2">
+                                <ChartContainer config={chartConfig} className="h-full w-full">
+                                    <BarChart accessibilityLayer data={metrics.daily_usage} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                                        <XAxis
+                                            dataKey="date"
+                                            tickLine={false}
+                                            tickMargin={10}
+                                            axisLine={false}
                                         />
-                                        <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                                        <Bar dataKey="input_tokens" name="Input Tokens" stackId="a" fill="#3b82f6" radius={[0, 0, 4, 4]} />
-                                        <Bar dataKey="output_tokens" name="Output Tokens" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                        <YAxis
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={10}
+                                            tickFormatter={(val) => val >= 1000 ? (val / 1000).toFixed(1) + 'k' : val}
+                                        />
+                                        <ChartTooltip
+                                            cursor={false}
+                                            content={<ChartTooltipContent />}
+                                        />
+                                        <ChartLegend content={<ChartLegendContent />} />
+                                        <Bar dataKey="input_tokens" fill="var(--color-input_tokens)" radius={4} />
+                                        <Bar dataKey="output_tokens" fill="var(--color-output_tokens)" radius={4} />
                                     </BarChart>
-                                </ResponsiveContainer>
+                                </ChartContainer>
                             </div>
                         </div>
 
